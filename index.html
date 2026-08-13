@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>麻將雲端記帳本</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 650px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #f4f7f6;
+            color: #333;
+        }
+        h2, h3 {
+            text-align: center;
+            color: #2c3e50;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input, button {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        /* 6選4 玩家選擇按鈕 */
+        .player-select-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .select-player-btn {
+            padding: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .select-player-btn.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+
+        /* 4人輸入區塊 */
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #eee;
+        }
+        .input-row span {
+            font-weight: bold;
+            min-width: 50px;
+        }
+        
+        /* 輸贏小方形按鈕樣式 */
+        .type-toggle-btn {
+            width: 45px;
+            height: 42px;
+            font-size: 15px;
+            font-weight: bold;
+            border: 2px solid #bdc3c7;
+            border-radius: 6px;
+            cursor: pointer;
+            background-color: #ecf0f1;
+            color: #2c3e50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            padding: 0;
+        }
+        .type-toggle-btn.win {
+            background-color: #27ae60;
+            color: white;
+            border-color: #1e8449;
+        }
+        .type-toggle-btn.lose {
+            background-color: #e74c3c;
+            color: white;
+            border-color: #c0392b;
+        }
+
+        .action-btn {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+        .action-btn:hover {
+            background-color: #1a252f;
+        }
+        .btn-danger {
+            background-color: #e74c3c;
+            margin-top: 15px;
+        }
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        /* 排行榜樣式 */
+        .rank-list {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 10px;
+        }
+        .rank-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            margin-bottom: 8px;
+            background: #fdfefe;
+            border: 1px solid #d6dbdf;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+        .rank-item.top-1 {
+            background: #fcf3cf;
+            border-color: #f7dc6f;
+        }
+
+        /* 歷史紀錄樣式 */
+        .history-container {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        .date-group {
+            margin-bottom: 15px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        .date-header {
+            background: #edf2f7;
+            padding: 8px 12px;
+            font-weight: bold;
+            color: #2d3748;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 14px;
+        }
+        ul.date-records {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+        ul.date-records li {
+            padding: 10px 12px;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        ul.date-records li .record-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .record-time {
+            font-size: 12px;
+            color: #a0aec0;
+        }
+        
+        /* 每一局底下的捐款輸入區塊 */
+        .game-donation-inputs {
+            display: flex;
+            gap: 10px;
+            background: #f8fafc;
+            padding: 8px 10px;
+            border-radius: 4px;
+            border: 1px dashed #cbd5e0;
+            font-size: 13px;
+            align-items: center;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+        .game-donation-inputs label {
+            margin: 0;
+            font-size: 13px;
+            color: #4a5568;
+            font-weight: normal;
+        }
+        .game-donation-inputs input {
+            padding: 4px 8px;
+            font-size: 13px;
+            width: 90px;
+        }
+        .small-save-btn {
+            padding: 4px 10px;
+            font-size: 12px;
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            width: auto;
+        }
+        .small-save-btn:hover {
+            background-color: #1e8449;
+        }
+    </style>
+
+    <!-- 引入 Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDS9-ray-dSj_Y7IvrRjofEIWHjqFgu0Zg",
+            authDomain: "mahjong-a2377.firebaseapp.com",
+            projectId: "mahjong-a2377",
+            storageBucket: "mahjong-a2377.firebasestorage.app",
+            messagingSenderId: "892513192079",
+            appId: "1:892513192079:web:ce033c110932cfbfc508fa",
+            measurementId: "G-707G2B2DH3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const allPlayers = ["大凸", "阿翔", "大姐", "鱷魚", "抖內姐", "黑人"];
+        let selectedPlayers = ["大凸", "阿翔", "大姐", "鱷魚"];
+        let playerStates = {
+            "大凸": { type: 'win', score: '' },
+            "阿翔": { type: 'win', score: '' },
+            "大姐": { type: 'win', score: '' },
+            "鱷魚": { type: 'win', score: '' }
+        };
+
+        window.onload = function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('gameDate').value = today;
+
+            renderSelector();
+            renderInputs();
+        }
+
+        window.togglePlayer = function(name) {
+            selectedPlayers.forEach(p => {
+                const inputEl = document.getElementById(`amt_${p}`);
+                if (inputEl && playerStates[p]) {
+                    playerStates[p].score = inputEl.value;
+                }
+            });
+
+            const index = selectedPlayers.indexOf(name);
+            if (index > -1) {
+                if (selectedPlayers.length <= 4) {
+                    alert('一局必須剛好選擇 4 位玩家！如要更換，請直接點擊其他未選中的玩家來替換。');
+                    return;
+                }
+                selectedPlayers.splice(index, 1);
+                delete playerStates[name];
+            } else {
+                if (selectedPlayers.length >= 4) {
+                    const removedPlayer = selectedPlayers.shift();
+                    delete playerStates[removedPlayer];
+                }
+                selectedPlayers.push(name);
+                playerStates[name] = { type: 'win', score: '' };
+            }
+
+            renderSelector();
+            renderInputs();
+        }
+
+        function renderSelector() {
+            const container = document.getElementById('playerSelectorContainer');
+            let html = '';
+            allPlayers.forEach(p => {
+                const isActive = selectedPlayers.includes(p) ? 'active' : '';
+                html += `<button type="button" class="select-player-btn ${isActive}" onclick="togglePlayer('${p}')">${p}</button>`;
+            });
+            container.innerHTML = html;
+        }
+
+        window.toggleType = function(name) {
+            const inputEl = document.getElementById(`amt_${name}`);
+            if (inputEl) {
+                playerStates[name].score = inputEl.value;
+            }
+
+            if (playerStates[name].type === 'win') {
+                playerStates[name].type = 'lose';
+            } else {
+                playerStates[name].type = 'win';
+            }
+            renderInputs();
+        }
+
+        function renderInputs() {
+            const container = document.getElementById('fourInputsContainer');
+            let html = '';
+            selectedPlayers.forEach(name => {
+                const state = playerStates[name];
+                const typeClass = state.type === 'win' ? 'win' : 'lose';
+                const typeText = state.type === 'win' ? '贏' : '輸';
+                const currentVal = state.score !== undefined ? state.score : '';
+
+                html += `
+                    <div class="input-row">
+                        <span>${name}</span>
+                        <button type="button" class="type-toggle-btn ${typeClass}" onclick="toggleType('${name}')">${typeText}</button>
+                        <input type="number" id="amt_${name}" placeholder="輸入積分" value="${currentVal}" min="0" oninput="updateScore('${name}', this.value)" style="flex:1;">
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        window.updateScore = function(name, val) {
+            if (playerStates[name]) {
+                playerStates[name].score = val;
+            }
+        }
+
+        window.addRecord = async function() {
+            const dateVal = document.getElementById('gameDate').value;
+            if (!dateVal) {
+                alert('請選擇打牌日期！');
+                return;
+            }
+
+            let totalSum = 0;
+            let recordDetails = {};
+
+            for (let name of selectedPlayers) {
+                const amtVal = document.getElementById(`amt_${name}`).value;
+                const num = parseFloat(amtVal);
+
+                if (isNaN(num) || num < 0) {
+                    alert(`請為「${name}」輸入有效的積分！`);
+                    return;
+                }
+
+                const signedAmount = playerStates[name].type === 'win' ? num : -num;
+                totalSum += signedAmount;
+                recordDetails[name] = signedAmount;
+            }
+
+            if (totalSum !== 0) {
+                alert(`⚠️ 積分總和不為 0（目前計算總和為：${totalSum}）！\n麻將積分總和必須剛好平衡（贏的總積分要等於輸的總積分），請重新檢查並輸入！`);
+                return;
+            }
+
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+            try {
+                await addDoc(collection(db, "mahjong_records_v7"), {
+                    date: dateVal,
+                    time: timeStr,
+                    details: recordDetails,
+                    timestamp: Date.now()
+                });
+                
+                for (let name in playerStates) {
+                    playerStates[name].score = '';
+                }
+                renderInputs();
+                alert('儲存成功！');
+            } catch (e) {
+                console.error("寫入錯誤: ", e);
+                alert("儲存失敗，請檢查網路連線！");
+            }
+        }
+
+        window.saveDonation = async function(docId, thirdName, fourthName) {
+            const amt3 = parseFloat(document.getElementById(`don3_amt_${docId}`).value) || 0;
+            const amt4 = parseFloat(document.getElementById(`don4_amt_${docId}`).value) || 0;
+
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            const dateVal = document.getElementById('gameDate').value;
+
+            try {
+                if (amt3 > 0) {
+                    await addDoc(collection(db, "mahjong_donations_v7"), {
+                        date: dateVal,
+                        time: timeStr,
+                        name: thirdName,
+                        amount: amt3,
+                        gameId: docId,
+                        timestamp: Date.now()
+                    });
+                }
+                if (amt4 > 0) {
+                    await addDoc(collection(db, "mahjong_donations_v7"), {
+                        date: dateVal,
+                        time: timeStr,
+                        name: fourthName,
+                        amount: amt4,
+                        gameId: docId,
+                        timestamp: Date.now()
+                    });
+                }
+                alert("捐款儲存成功！");
+            } catch (e) {
+                console.error("捐款寫入錯誤: ", e);
+                alert("儲存失敗！");
+            }
+        }
+
+        window.clearAllData = async function() {
+            if (confirm('確定要清空雲端所有的輸贏記錄與捐款記錄嗎？所有人的資料都會被刪除！')) {
+                try {
+                    const recSnapshot = await getDocs(collection(db, "mahjong_records_v7"));
+                    recSnapshot.forEach(async (document) => {
+                        await deleteDoc(doc(db, "mahjong_records_v7", document.id));
+                    });
+                    const donSnapshot = await getDocs(collection(db, "mahjong_donations_v7"));
+                    donSnapshot.forEach(async (document) => {
+                        await deleteDoc(doc(db, "mahjong_donations_v7", document.id));
+                    });
+                    alert("所有資料已清空！");
+                } catch (e) {
+                    console.error("刪除錯誤: ", e);
+                }
+            }
+        }
+
+        let latestRecords = [];
+        let latestDonations = [];
+
+        const qRec = query(collection(db, "mahjong_records_v7"), orderBy("timestamp", "asc"));
+        const qDon = query(collection(db, "mahjong_donations_v7"), orderBy("timestamp", "asc"));
+
+        onSnapshot(qRec, (snapshot) => {
+            latestRecords = [];
+            snapshot.forEach((docSnap) => {
+                latestRecords.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            renderDashboard(latestRecords, latestDonations);
+        });
+
+        onSnapshot(qDon, (snapshot) => {
+            latestDonations = [];
+            snapshot.forEach((docSnap) => {
+                latestDonations.push({ id: docSnap.id, ...docSnap.data() });
+            });
+            renderDashboard(latestRecords, latestDonations);
+        });
+
+        function renderDashboard(records, donations) {
+            const listEl = document.getElementById('recordList');
+            const rankEl = document.getElementById('rankContainer');
+            const avgRankEl = document.getElementById('avgRankContainer');
+            const donationSummaryEl = document.getElementById('donationSummaryContainer');
+
+            const summaryObj = {};
+            const countObj = {};
+            const donationObj = {};
+            allPlayers.forEach(p => { 
+                summaryObj[p] = 0; 
+                countObj[p] = 0;
+                donationObj[p] = 0;
+            });
+
+            records.forEach(r => {
+                const details = r.details;
+                for (let name in details) {
+                    if (summaryObj[name] !== undefined) {
+                        summaryObj[name] += details[name];
+                        countObj[name] += 1;
+                    }
+                }
+            });
+
+            donations.forEach(d => {
+                if (donationObj[d.name] !== undefined) {
+                    donationObj[d.name] += Number(d.amount);
+                }
+            });
+
+            // 1. 渲染總積分排行榜
+            let sortedPlayers = Object.keys(summaryObj).sort((a, b) => summaryObj[b] - summaryObj[a]);
+            let rankHTML = '<ul class="rank-list">';
+            sortedPlayers.forEach((name, index) => {
+                const total = summaryObj[name];
+                const color = total > 0 ? 'color: #27ae60;' : (total < 0 ? 'color: #e74c3c;' : 'color: #7f8c8d;');
+                const sign = total > 0 ? '+' : '';
+                const rankClass = index === 0 && total > 0 ? 'top-1' : '';
+                const medals = ['👑', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣'];
+
+                rankHTML += `
+                    <li class="rank-item ${rankClass}">
+                        <span>${medals[index]} 第 ${index + 1} 名：${name}</span>
+                        <span style="${color}">${sign}${total}</span>
+                    </li>
+                `;
+            });
+            rankHTML += '</ul>';
+            rankEl.innerHTML = rankHTML;
+
+            // 2. 渲染平均分排行榜
+            let sortedByAvg = Object.keys(summaryObj).sort((a, b) => {
+                let avgA = countObj[a] > 0 ? summaryObj[a] / countObj[a] : 0;
+                let avgB = countObj[b] > 0 ? summaryObj[b] / countObj[b] : 0;
+                return avgB - avgA;
+            });
+
+            let avgRankHTML = '<ul class="rank-list">';
+            sortedByAvg.forEach((name, index) => {
+                const count = countObj[name];
+                const avg = count > 0 ? (summaryObj[name] / count).toFixed(1) : '0.0';
+                const numAvg = parseFloat(avg);
+                const color = numAvg > 0 ? 'color: #27ae60;' : (numAvg < 0 ? 'color: #e74c3c;' : 'color: #7f8c8d;');
+                const sign = numAvg > 0 ? '+' : '';
+                const rankClass = index === 0 && numAvg > 0 ? 'top-1' : '';
+                const medals = ['👑', '🥈', '🥉', '4️⃣', '5️⃣', '6️⃣'];
+
+                avgRankHTML += `
+                    <li class="rank-item ${rankClass}">
+                        <span>${medals[index]} 第 ${index + 1} 名：${name} <span style="font-size: 12px; color: #888;">(共 ${count} 場)</span></span>
+                        <span style="${color}">${sign}${avg}</span>
+                    </li>
+                `;
+            });
+            avgRankHTML += '</ul>';
+            avgRankEl.innerHTML = avgRankHTML;
+
+            // 3. 渲染歷史明細
+            if (records.length === 0) {
+                listEl.innerHTML = '<p style="color: #7f8c8d; text-align: center;">尚無打牌紀錄</p>';
+            } else {
+                let groupedByDate = {};
+                records.forEach(r => {
+                    const d = r.date || '未分類日期';
+                    if (!groupedByDate[d]) {
+                        groupedByDate[d] = [];
+                    }
+                    groupedByDate[d].push(r);
+                });
+
+                let sortedDates = Object.keys(groupedByDate).sort((a, b) => new Date(b) - new Date(a));
+
+                let historyHTML = '';
+                sortedDates.forEach(dateStr => {
+                    let dayRecords = groupedByDate[dateStr];
+
+                    historyHTML += `
+                        <div class="date-group">
+                            <div class="date-header">📅 記錄日期：${dateStr}</div>
+                            <ul class="date-records">
+                    `;
+
+                    for (let i = dayRecords.length - 1; i >= 0; i--) {
+                        let r = dayRecords[i];
+                        let gameIndex = i + 1;
+                        let gameTitle = `第 ${gameIndex} 將`;
+
+                        let detailStrs = [];
+                        let sortedThisGame = Object.keys(r.details).sort((a, b) => r.details[b] - r.details[a]);
+                        let p3 = sortedThisGame[2] || '第三名';
+                        let p4 = sortedThisGame[3] || '第四名';
+
+                        for (let name in r.details) {
+                            const amt = r.details[name];
+                            const color = amt >= 0 ? 'color: #27ae60;' : 'color: #e74c3c;';
+                            const sign = amt >= 0 ? '+' : '';
+                            detailStrs.push(`<span style="${color}">${name} ${sign}${amt}</span>`);
+                        }
+
+                        historyHTML += `
+                            <li>
+                                <div class="record-main">
+                                    <div>
+                                        <strong style="color: #4a5568; margin-right: 8px;">[${gameTitle}]</strong>
+                                        <span style="display: inline-flex; gap: 10px; flex-wrap: wrap;">${detailStrs.join(' | ')}</span>
+                                    </div>
+                                    <div class="record-time">${r.time || ''}</div>
+                                </div>
+                                <div class="game-donation-inputs">
+                                    <div>💡 <strong>${p3}</strong> (3名) 捐款：<input type="number" id="don3_amt_${r.id}" placeholder="金額"></div>
+                                    <div>💡 <strong>${p4}</strong> (4名) 捐款：<input type="number" id="don4_amt_${r.id}" placeholder="金額"></div>
+                                    <button type="button" class="small-save-btn" onclick="saveDonation('${r.id}', '${p3}', '${p4}')">儲存捐款</button>
+                                </div>
+                            </li>
+                        `;
+                    }
+
+                    historyHTML += `
+                            </ul>
+                        </div>
+                    `;
+                });
+                listEl.innerHTML = historyHTML;
+            }
+
+            // 4. 渲染最下方的「捐款結果總計」
+            let donationHTML = '<ul class="rank-list">';
+            let sortedDonationPlayers = Object.keys(donationObj).sort((a, b) => donationObj[b] - donationObj[a]);
+            sortedDonationPlayers.forEach((name) => {
+                const totalDonation = donationObj[name];
+                donationHTML += `
+                    <li class="rank-item">
+                        <span>🎁 ${name}</span>
+                        <span style="color: #d35400;">$${totalDonation}</span>
+                    </li>
+                `;
+            });
+            donationHTML += '</ul>';
+            donationSummaryEl.innerHTML = donationHTML;
+        }
+    </script>
+</head>
+<body>
+
+    <h2>🀄 麻將雲端記帳本</h2>
+
+    <div class="card">
+        <h3>1. 選擇打牌日期與 4 位玩家</h3>
+        <div class="form-group">
+            <label for="gameDate">選擇日期：</label>
+            <input type="date" id="gameDate">
+        </div>
+        <div class="form-group" style="margin-top: 15px;">
+            <label>選擇本局 4 位玩家：</label>
+            <p style="font-size: 12px; color: #666; margin-top: -3px; margin-bottom: 8px;">直接點擊未選中的人，即可自動替換！</p>
+            <div class="player-select-grid" id="playerSelectorContainer">
+                <!-- 由 JS 動態生成 -->
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>2. 輸入各家積分</h3>
+        <div id="fourInputsContainer">
+            <!-- 由 JS 動態生成 4 個輸入框 -->
+        </div>
+        <button class="action-btn" onclick="addRecord()">確認無誤並儲存記錄</button>
+    </div>
+
+    <div class="card">
+        <h3>🏆 總積分排行榜</h3>
+        <div id="rankContainer">
+            <!-- 由 JS 動態生成總積分排行榜 -->
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📈 平均分排行榜（總積分 ÷ 場次）</h3>
+        <div id="avgRankContainer">
+            <!-- 由 JS 動態生成平均分排行榜 -->
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📜 歷史明細（依日期與將次區分）</h3>
+        <div class="history-container" id="recordList">
+            <p style="color: #7f8c8d; text-align: center;">尚無打牌紀錄</p>
+        </div>
+        <button class="action-btn btn-danger" onclick="clearAllData()" style="margin-top: 15px;">清空所有雲端資料</button>
+    </div>
+
+    <div class="card">
+        <h3>🎁 捐款結果總計</h3>
+        <div id="donationSummaryContainer">
+            <!-- 由 JS 動態生成捐款結果統計 -->
+        </div>
+    </div>
+
+</body>
+</html>
