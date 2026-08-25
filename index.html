@@ -389,6 +389,39 @@
         .exit-clear-btn:hover {
             background-color: #c0392b;
         }
+
+        /* ===============================
+           總金額
+        =============================== */
+
+        .grand-total-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px 20px;
+            background: #f8fafc;
+            border: 2px solid #27ae60;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        .grand-total-label {
+            font-size: 18px;
+            color: #2c3e50;
+        }
+
+        .grand-total-amount {
+            font-size: 26px;
+            color: #27ae60;
+            font-weight: bold;
+        }
+
+        .grand-total-note {
+            text-align: center;
+            font-size: 13px;
+            color: #718096;
+            margin-top: 10px;
+        }
     </style>
 
     <script type="module">
@@ -422,8 +455,15 @@
         };
 
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
+        const app =
+            initializeApp(
+                firebaseConfig
+            );
+
+        const db =
+            getFirestore(
+                app
+            );
 
 
         /* ===============================
@@ -451,6 +491,7 @@
 
 
         let playerStates = {
+
             "大凸": {
                 type: "win",
                 score: ""
@@ -474,23 +515,74 @@
 
 
         /* ===============================
+           總金額暫存
+        =============================== */
+
+        let currentDonationGrandTotal = 0;
+
+        let currentExitFeeGrandTotal = 0;
+
+
+        function updateGrandTotal() {
+
+            const total =
+                currentDonationGrandTotal +
+                currentExitFeeGrandTotal;
+
+
+            const amountEl =
+                document.getElementById(
+                    "grandTotalAmount"
+                );
+
+
+            const detailEl =
+                document.getElementById(
+                    "grandTotalDetail"
+                );
+
+
+            if (amountEl) {
+
+                amountEl.textContent =
+                    `$${total}`;
+            }
+
+
+            if (detailEl) {
+
+                detailEl.textContent =
+                    `捐款 $${currentDonationGrandTotal} ＋ 離場費 $${currentExitFeeGrandTotal}`;
+            }
+        }
+
+
+        /* ===============================
            網頁載入
         =============================== */
 
-        window.onload = function() {
+        window.onload =
+        function() {
 
             const today =
                 new Date()
                     .toISOString()
                     .split("T")[0];
 
+
             document.getElementById(
                 "gameDate"
-            ).value = today;
+            ).value =
+                today;
+
 
             renderSelector();
+
             renderInputs();
+
             renderExitFeePlayerOptions();
+
+            updateGrandTotal();
         };
 
 
@@ -498,30 +590,40 @@
            選擇玩家
         =============================== */
 
-        window.togglePlayer = function(name) {
+        window.togglePlayer =
+        function(name) {
 
-            selectedPlayers.forEach(p => {
+            selectedPlayers.forEach(
 
-                const inputEl =
-                    document.getElementById(
-                        `amt_${p}`
-                    );
+                p => {
 
-                if (
-                    inputEl &&
-                    playerStates[p]
-                ) {
-                    playerStates[p].score =
-                        inputEl.value;
+                    const inputEl =
+                        document.getElementById(
+                            `amt_${p}`
+                        );
+
+
+                    if (
+                        inputEl &&
+                        playerStates[p]
+                    ) {
+
+                        playerStates[p].score =
+                            inputEl.value;
+                    }
                 }
-            });
+            );
 
 
             const index =
-                selectedPlayers.indexOf(name);
+                selectedPlayers.indexOf(
+                    name
+                );
 
 
-            if (index > -1) {
+            if (
+                index > -1
+            ) {
 
                 alert(
                     "一局必須剛好選擇 4 位玩家！如要更換，請直接點擊其他未選中的玩家來替換。"
@@ -538,27 +640,37 @@
                 const removedPlayer =
                     selectedPlayers.shift();
 
+
                 delete playerStates[
                     removedPlayer
                 ];
             }
 
 
-            selectedPlayers.push(name);
+            selectedPlayers.push(
+                name
+            );
+
 
             playerStates[name] = {
-                type: "win",
-                score: ""
+
+                type:
+                    "win",
+
+                score:
+                    ""
+
             };
 
 
             renderSelector();
+
             renderInputs();
         };
 
 
         /* ===============================
-           玩家選擇按鈕
+           玩家按鈕
         =============================== */
 
         function renderSelector() {
@@ -568,29 +680,42 @@
                     "playerSelectorContainer"
                 );
 
-            let html = "";
+
+            let html =
+                "";
 
 
-            allPlayers.forEach(p => {
+            allPlayers.forEach(
 
-                const active =
-                    selectedPlayers.includes(p)
-                        ? "active"
-                        : "";
+                p => {
 
-                html += `
-                    <button
-                        type="button"
-                        class="select-player-btn ${active}"
-                        onclick="togglePlayer('${p}')"
-                    >
-                        ${p}
-                    </button>
-                `;
-            });
+                    const active =
+                        selectedPlayers.includes(
+                            p
+                        )
+                            ? "active"
+                            : "";
 
 
-            container.innerHTML = html;
+                    html += `
+
+                        <button
+                            type="button"
+                            class="select-player-btn ${active}"
+                            onclick="togglePlayer('${p}')"
+                        >
+
+                            ${p}
+
+                        </button>
+
+                    `;
+                }
+            );
+
+
+            container.innerHTML =
+                html;
         }
 
 
@@ -598,7 +723,8 @@
            切換輸贏
         =============================== */
 
-        window.toggleType = function(name) {
+        window.toggleType =
+        function(name) {
 
             const inputEl =
                 document.getElementById(
@@ -606,7 +732,9 @@
                 );
 
 
-            if (inputEl) {
+            if (
+                inputEl
+            ) {
 
                 playerStates[name].score =
                     inputEl.value;
@@ -614,8 +742,11 @@
 
 
             playerStates[name].type =
-                playerStates[name].type === "win"
+                playerStates[name].type ===
+                "win"
+
                     ? "lose"
+
                     : "win";
 
 
@@ -624,7 +755,7 @@
 
 
         /* ===============================
-           顯示積分輸入
+           積分輸入
         =============================== */
 
         function renderInputs() {
@@ -634,70 +765,105 @@
                     "fourInputsContainer"
                 );
 
-            let html = "";
+
+            let html =
+                "";
 
 
-            selectedPlayers.forEach(name => {
+            selectedPlayers.forEach(
 
-                const state =
-                    playerStates[name];
+                name => {
 
-                const typeClass =
-                    state.type === "win"
-                        ? "win"
-                        : "lose";
-
-                const typeText =
-                    state.type === "win"
-                        ? "贏"
-                        : "輸";
-
-                const currentVal =
-                    state.score !== undefined
-                        ? state.score
-                        : "";
+                    const state =
+                        playerStates[
+                            name
+                        ];
 
 
-                html += `
-                    <div class="input-row">
+                    const typeClass =
+                        state.type ===
+                        "win"
 
-                        <span>
-                            ${name}
-                        </span>
+                            ? "win"
 
-                        <button
-                            type="button"
-                            class="type-toggle-btn ${typeClass}"
-                            onclick="toggleType('${name}')"
-                        >
-                            ${typeText}
-                        </button>
-
-                        <input
-                            type="number"
-                            id="amt_${name}"
-                            placeholder="輸入積分"
-                            value="${currentVal}"
-                            min="0"
-                            oninput="updateScore('${name}', this.value)"
-                            style="flex:1;"
-                        >
-
-                    </div>
-                `;
-            });
+                            : "lose";
 
 
-            container.innerHTML = html;
+                    const typeText =
+                        state.type ===
+                        "win"
+
+                            ? "贏"
+
+                            : "輸";
+
+
+                    const currentVal =
+                        state.score !==
+                        undefined
+
+                            ? state.score
+
+                            : "";
+
+
+                    html += `
+
+                        <div class="input-row">
+
+                            <span>
+                                ${name}
+                            </span>
+
+
+                            <button
+                                type="button"
+                                class="type-toggle-btn ${typeClass}"
+                                onclick="toggleType('${name}')"
+                            >
+
+                                ${typeText}
+
+                            </button>
+
+
+                            <input
+                                type="number"
+                                id="amt_${name}"
+                                placeholder="輸入積分"
+                                value="${currentVal}"
+                                min="0"
+                                oninput="updateScore('${name}', this.value)"
+                                style="flex:1;"
+                            >
+
+                        </div>
+
+                    `;
+                }
+            );
+
+
+            container.innerHTML =
+                html;
         }
 
 
         window.updateScore =
-        function(name, val) {
+        function(
+            name,
+            val
+        ) {
 
-            if (playerStates[name]) {
+            if (
+                playerStates[
+                    name
+                ]
+            ) {
 
-                playerStates[name].score =
+                playerStates[
+                    name
+                ].score =
                     val;
             }
         };
@@ -716,7 +882,9 @@
                 ).value;
 
 
-            if (!dateVal) {
+            if (
+                !dateVal
+            ) {
 
                 alert(
                     "請選擇打牌日期！"
@@ -726,8 +894,12 @@
             }
 
 
-            let totalSum = 0;
-            let recordDetails = {};
+            let totalSum =
+                0;
+
+
+            let recordDetails =
+                {};
 
 
             for (
@@ -740,6 +912,7 @@
                         `amt_${name}`
                     ).value;
 
+
                 const num =
                     parseFloat(
                         amtVal
@@ -747,7 +920,9 @@
 
 
                 if (
-                    isNaN(num) ||
+                    isNaN(
+                        num
+                    ) ||
                     num < 0
                 ) {
 
@@ -760,29 +935,41 @@
 
 
                 const signedAmount =
-                    playerStates[name].type ===
+                    playerStates[
+                        name
+                    ].type ===
                     "win"
+
                         ? num
+
                         : -num;
 
 
                 totalSum +=
                     signedAmount;
 
-                recordDetails[name] =
+
+                recordDetails[
+                    name
+                ] =
                     signedAmount;
             }
 
 
-            if (totalSum !== 0) {
+            if (
+                totalSum !==
+                0
+            ) {
 
                 alert(
+
 `⚠️ 積分總和不為 0（目前計算總和為：${totalSum}）！
 
 麻將積分總和必須剛好平衡
 （贏的總積分要等於輸的總積分）
 
 請重新檢查並輸入！`
+
                 );
 
                 return;
@@ -792,22 +979,33 @@
             const now =
                 new Date();
 
+
             const timeStr =
+
                 `${String(
                     now.getHours()
-                ).padStart(2, "0")}:${String(
+                ).padStart(
+                    2,
+                    "0"
+                )}:${String(
                     now.getMinutes()
-                ).padStart(2, "0")}`;
+                ).padStart(
+                    2,
+                    "0"
+                )}`;
 
 
             try {
 
                 await addDoc(
+
                     collection(
                         db,
                         "mahjong_records_v7"
                     ),
+
                     {
+
                         date:
                             dateVal,
 
@@ -816,6 +1014,7 @@
 
                         details:
                             recordDetails,
+
 
                         donation3:
                             0,
@@ -829,6 +1028,7 @@
                         donation4Type:
                             "",
 
+
                         parasite3Name:
                             "",
 
@@ -837,6 +1037,7 @@
 
                         parasite3Type:
                             "",
+
 
                         parasite4Name:
                             "",
@@ -847,8 +1048,10 @@
                         parasite4Type:
                             "",
 
+
                         timestamp:
                             Date.now()
+
                     }
                 );
 
@@ -860,22 +1063,27 @@
 
                     playerStates[
                         name
-                    ].score = "";
+                    ].score =
+                        "";
                 }
 
 
                 renderInputs();
 
+
                 alert(
                     "儲存成功！"
                 );
 
-            } catch (e) {
+            } catch (
+                e
+            ) {
 
                 console.error(
                     "寫入錯誤：",
                     e
                 );
+
 
                 alert(
                     "儲存失敗，請檢查網路連線！"
@@ -889,17 +1097,22 @@
         =============================== */
 
         window.toggleParasiteDonation =
-        function(docId, rank) {
+        function(
+            docId,
+            rank
+        ) {
 
             const nameSelect =
                 document.getElementById(
                     `parasite${rank}_name_${docId}`
                 );
 
+
             const donationWrap =
                 document.getElementById(
                     `parasite${rank}_donation_wrap_${docId}`
                 );
+
 
             const donationSelect =
                 document.getElementById(
@@ -908,7 +1121,8 @@
 
 
             if (
-                nameSelect.value !== ""
+                nameSelect.value !==
+                ""
             ) {
 
                 donationWrap.style.display =
@@ -919,6 +1133,7 @@
                 donationWrap.style.display =
                     "none";
 
+
                 donationSelect.value =
                     "";
             }
@@ -926,16 +1141,19 @@
 
 
         /* ===============================
-           捐款 / 洗碗 / 寄生
+           儲存捐款＋寄生
         =============================== */
 
         window.saveDonation =
-        async function(docId) {
+        async function(
+            docId
+        ) {
 
             const select3 =
                 document.getElementById(
                     `don3_amt_${docId}`
                 );
+
 
             const select4 =
                 document.getElementById(
@@ -945,6 +1163,7 @@
 
             const choice3 =
                 select3.value;
+
 
             const choice4 =
                 select4.value;
@@ -964,23 +1183,42 @@
 
 
             const amount3 =
-                choice3 === "wash"
+                choice3 ===
+                "wash"
+
                     ? 0
-                    : Number(choice3);
+
+                    : Number(
+                        choice3
+                    );
+
 
             const amount4 =
-                choice4 === "wash"
+                choice4 ===
+                "wash"
+
                     ? 0
-                    : Number(choice4);
+
+                    : Number(
+                        choice4
+                    );
+
 
             const type3 =
-                choice3 === "wash"
+                choice3 ===
+                "wash"
+
                     ? "wash"
+
                     : "money";
 
+
             const type4 =
-                choice4 === "wash"
+                choice4 ===
+                "wash"
+
                     ? "wash"
+
                     : "money";
 
 
@@ -989,13 +1227,19 @@
                     `parasite3_name_${docId}`
                 ).value;
 
+
             const parasite3Select =
                 document.getElementById(
                     `parasite3_amt_${docId}`
                 );
 
-            let parasite3Donation = 0;
-            let parasite3Type = "";
+
+            let parasite3Donation =
+                0;
+
+
+            let parasite3Type =
+                "";
 
 
             if (
@@ -1019,15 +1263,22 @@
 
 
                 parasite3Donation =
-                    parasite3Choice === "wash"
+                    parasite3Choice ===
+                    "wash"
+
                         ? 0
+
                         : Number(
                             parasite3Choice
                         );
 
+
                 parasite3Type =
-                    parasite3Choice === "wash"
+                    parasite3Choice ===
+                    "wash"
+
                         ? "wash"
+
                         : "money";
             }
 
@@ -1037,13 +1288,19 @@
                     `parasite4_name_${docId}`
                 ).value;
 
+
             const parasite4Select =
                 document.getElementById(
                     `parasite4_amt_${docId}`
                 );
 
-            let parasite4Donation = 0;
-            let parasite4Type = "";
+
+            let parasite4Donation =
+                0;
+
+
+            let parasite4Type =
+                "";
 
 
             if (
@@ -1067,15 +1324,22 @@
 
 
                 parasite4Donation =
-                    parasite4Choice === "wash"
+                    parasite4Choice ===
+                    "wash"
+
                         ? 0
+
                         : Number(
                             parasite4Choice
                         );
 
+
                 parasite4Type =
-                    parasite4Choice === "wash"
+                    parasite4Choice ===
+                    "wash"
+
                         ? "wash"
+
                         : "money";
             }
 
@@ -1083,12 +1347,15 @@
             try {
 
                 await setDoc(
+
                     doc(
                         db,
                         "mahjong_records_v7",
                         docId
                     ),
+
                     {
+
                         donation3:
                             amount3,
 
@@ -1101,6 +1368,7 @@
                         donation4Type:
                             type4,
 
+
                         parasite3Name:
                             parasite3Name,
 
@@ -1110,6 +1378,7 @@
                         parasite3Type:
                             parasite3Type,
 
+
                         parasite4Name:
                             parasite4Name,
 
@@ -1118,9 +1387,12 @@
 
                         parasite4Type:
                             parasite4Type
+
                     },
+
                     {
-                        merge: true
+                        merge:
+                            true
                     }
                 );
 
@@ -1129,12 +1401,15 @@
                     "結果已儲存！"
                 );
 
-            } catch (e) {
+            } catch (
+                e
+            ) {
 
                 console.error(
                     "結果寫入錯誤：",
                     e
                 );
+
 
                 alert(
                     "儲存失敗！"
@@ -1148,7 +1423,9 @@
         =============================== */
 
         window.deleteRecord =
-        async function(docId) {
+        async function(
+            docId
+        ) {
 
             const pwd =
                 prompt(
@@ -1156,12 +1433,18 @@
                 );
 
 
-            if (pwd === null) {
+            if (
+                pwd === null
+            ) {
+
                 return;
             }
 
 
-            if (pwd !== "0721") {
+            if (
+                pwd !==
+                "0721"
+            ) {
 
                 alert(
                     "密碼錯誤，無法刪除資料！"
@@ -1173,11 +1456,14 @@
 
             if (
                 !confirm(
+
 `確定要刪除這一筆牌局紀錄嗎？
 
 此筆積分與捐款資料都會一起刪除，而且無法復原！`
+
                 )
             ) {
+
                 return;
             }
 
@@ -1185,11 +1471,13 @@
             try {
 
                 await deleteDoc(
+
                     doc(
                         db,
                         "mahjong_records_v7",
                         docId
                     )
+
                 );
 
 
@@ -1197,12 +1485,15 @@
                     "此筆資料已刪除！"
                 );
 
-            } catch (e) {
+            } catch (
+                e
+            ) {
 
                 console.error(
                     "刪除錯誤：",
                     e
                 );
+
 
                 alert(
                     "刪除失敗，請檢查網路連線！"
@@ -1224,19 +1515,30 @@
 
 
             let html = `
+
                 <option value="">
+
                     請選擇玩家
+
                 </option>
+
             `;
 
 
             allPlayers.forEach(
+
                 name => {
 
                     html += `
-                        <option value="${name}">
+
+                        <option
+                            value="${name}"
+                        >
+
                             ${name}
+
                         </option>
+
                     `;
                 }
             );
@@ -1259,12 +1561,14 @@
                     "exitFeePlayer"
                 );
 
+
             const player =
                 select.value;
 
 
             if (
-                player === ""
+                player ===
+                ""
             ) {
 
                 alert(
@@ -1280,29 +1584,46 @@
 
 
             const dateStr =
+
                 `${now.getFullYear()}-${String(
                     now.getMonth() + 1
-                ).padStart(2, "0")}-${String(
+                ).padStart(
+                    2,
+                    "0"
+                )}-${String(
                     now.getDate()
-                ).padStart(2, "0")}`;
+                ).padStart(
+                    2,
+                    "0"
+                )}`;
 
 
             const timeStr =
+
                 `${String(
                     now.getHours()
-                ).padStart(2, "0")}:${String(
+                ).padStart(
+                    2,
+                    "0"
+                )}:${String(
                     now.getMinutes()
-                ).padStart(2, "0")}`;
+                ).padStart(
+                    2,
+                    "0"
+                )}`;
 
 
             try {
 
                 await addDoc(
+
                     collection(
                         db,
                         "mahjong_exit_fees_v1"
                     ),
+
                     {
+
                         player:
                             player,
 
@@ -1317,6 +1638,7 @@
 
                         timestamp:
                             Date.now()
+
                     }
                 );
 
@@ -1329,12 +1651,15 @@
                     `${player} 的 50 元離場費已儲存！`
                 );
 
-            } catch (e) {
+            } catch (
+                e
+            ) {
 
                 console.error(
                     "離場費寫入錯誤：",
                     e
                 );
+
 
                 alert(
                     "離場費儲存失敗，請檢查網路連線！"
@@ -1356,12 +1681,18 @@
                 );
 
 
-            if (pwd === null) {
+            if (
+                pwd === null
+            ) {
+
                 return;
             }
 
 
-            if (pwd !== "0721") {
+            if (
+                pwd !==
+                "0721"
+            ) {
 
                 alert(
                     "密碼錯誤，無法清空離場費！"
@@ -1373,15 +1704,20 @@
 
             const confirmDelete =
                 confirm(
+
 `確定要清空全部離場費紀錄嗎？
 
 所有人的離場費累計與離場費歷史紀錄都會被刪除，而且無法復原！
 
 牌局、積分、一般捐款、寄生與洗碗資料不會受到影響。`
+
                 );
 
 
-            if (!confirmDelete) {
+            if (
+                !confirmDelete
+            ) {
+
                 return;
             }
 
@@ -1390,24 +1726,33 @@
 
                 const snapshot =
                     await getDocs(
+
                         collection(
                             db,
                             "mahjong_exit_fees_v1"
                         )
+
                     );
 
 
                 await Promise.all(
+
                     snapshot.docs.map(
+
                         document =>
+
                             deleteDoc(
+
                                 doc(
                                     db,
                                     "mahjong_exit_fees_v1",
                                     document.id
                                 )
+
                             )
+
                     )
+
                 );
 
 
@@ -1415,12 +1760,15 @@
                     "全部離場費已清空！"
                 );
 
-            } catch (e) {
+            } catch (
+                e
+            ) {
 
                 console.error(
                     "清空離場費錯誤：",
                     e
                 );
+
 
                 alert(
                     "清空離場費失敗，請檢查網路連線！"
@@ -1430,40 +1778,50 @@
 
 
         /* ===============================
-           Firebase 牌局監聽
+           牌局監聽
         =============================== */
 
-        let latestRecords = [];
+        let latestRecords =
+            [];
 
 
         const qRec =
             query(
+
                 collection(
                     db,
                     "mahjong_records_v7"
                 ),
+
                 orderBy(
                     "timestamp",
                     "asc"
                 )
+
             );
 
 
         onSnapshot(
+
             qRec,
+
             snapshot => {
 
-                latestRecords = [];
+                latestRecords =
+                    [];
 
 
                 snapshot.forEach(
+
                     docSnap => {
 
                         latestRecords.push({
+
                             id:
                                 docSnap.id,
 
                             ...docSnap.data()
+
                         });
                     }
                 );
@@ -1477,40 +1835,50 @@
 
 
         /* ===============================
-           Firebase 離場費監聽
+           離場費監聽
         =============================== */
 
-        let latestExitFeeRecords = [];
+        let latestExitFeeRecords =
+            [];
 
 
         const qExitFees =
             query(
+
                 collection(
                     db,
                     "mahjong_exit_fees_v1"
                 ),
+
                 orderBy(
                     "timestamp",
                     "asc"
                 )
+
             );
 
 
         onSnapshot(
+
             qExitFees,
+
             snapshot => {
 
-                latestExitFeeRecords = [];
+                latestExitFeeRecords =
+                    [];
 
 
                 snapshot.forEach(
+
                     docSnap => {
 
                         latestExitFeeRecords.push({
+
                             id:
                                 docSnap.id,
 
                             ...docSnap.data()
+
                         });
                     }
                 );
@@ -1527,12 +1895,15 @@
            離場費統計
         =============================== */
 
-        function renderExitFees(records) {
+        function renderExitFees(
+            records
+        ) {
 
             const summaryEl =
                 document.getElementById(
                     "exitFeeSummaryContainer"
                 );
+
 
             const historyEl =
                 document.getElementById(
@@ -1540,32 +1911,68 @@
                 );
 
 
-            const totals = {};
+            const totals =
+                {};
 
 
             allPlayers.forEach(
+
                 name => {
 
-                    totals[name] = 0;
+                    totals[name] =
+                        0;
                 }
             );
 
 
             records.forEach(
+
                 r => {
 
                     if (
-                        totals[r.player] !==
+                        totals[
+                            r.player
+                        ] !==
                         undefined
                     ) {
 
-                        totals[r.player] +=
+                        totals[
+                            r.player
+                        ] +=
+
                             Number(
-                                r.amount || 0
+                                r.amount ||
+                                0
                             );
                     }
                 }
             );
+
+
+            /* 更新離場費總額 */
+
+            currentExitFeeGrandTotal =
+                Object.values(
+                    totals
+                ).reduce(
+
+                    (
+                        sum,
+                        value
+                    ) =>
+
+                        sum +
+                        Number(
+                            value ||
+                            0
+                        ),
+
+                    0
+
+                );
+
+
+            updateGrandTotal();
 
 
             let summaryHTML =
@@ -1573,24 +1980,32 @@
 
 
             allPlayers.forEach(
+
                 name => {
 
                     summaryHTML += `
+
                         <li class="rank-item">
 
                             <span>
+
                                 💰 ${name}
+
                             </span>
+
 
                             <span
                                 style="
                                     color:#d35400;
                                 "
                             >
+
                                 $${totals[name]}
+
                             </span>
 
                         </li>
+
                     `;
                 }
             );
@@ -1605,10 +2020,12 @@
 
 
             if (
-                records.length === 0
+                records.length ===
+                0
             ) {
 
                 historyEl.innerHTML = `
+
                     <p
                         style="
                             color:#7f8c8d;
@@ -1616,22 +2033,32 @@
                             padding:10px;
                         "
                     >
+
                         尚無離場費紀錄
+
                     </p>
+
                 `;
+
 
                 return;
             }
 
 
-            let historyHTML = "";
+            let historyHTML =
+                "";
 
 
             for (
+
                 let i =
                     records.length - 1;
-                i >= 0;
+
+                i >=
+                    0;
+
                 i--
+
             ) {
 
                 const r =
@@ -1639,26 +2066,35 @@
 
 
                 historyHTML += `
+
                     <div class="exit-fee-history-item">
 
                         <div>
 
                             <span class="exit-fee-player">
+
                                 ${r.player}
+
                             </span>
 
                             <span class="exit-fee-amount">
+
                                 $${r.amount || 50}
+
                             </span>
 
                         </div>
 
+
                         <div class="exit-fee-time">
+
                             ${r.date || ""}
                             ${r.time || ""}
+
                         </div>
 
                     </div>
+
                 `;
             }
 
@@ -1669,30 +2105,36 @@
 
 
         /* ===============================
-           畫面統計
+           主畫面統計
         =============================== */
 
-        function renderDashboard(records) {
+        function renderDashboard(
+            records
+        ) {
 
             const listEl =
                 document.getElementById(
                     "recordList"
                 );
 
+
             const rankEl =
                 document.getElementById(
                     "rankContainer"
                 );
+
 
             const avgRankEl =
                 document.getElementById(
                     "avgRankContainer"
                 );
 
+
             const donationSummaryEl =
                 document.getElementById(
                     "donationSummaryContainer"
                 );
+
 
             const washRankEl =
                 document.getElementById(
@@ -1700,24 +2142,43 @@
                 );
 
 
-            const summaryObj = {};
-            const countObj = {};
-            const donationObj = {};
-            const washObj = {};
+            const summaryObj =
+                {};
+
+
+            const countObj =
+                {};
+
+
+            const donationObj =
+                {};
+
+
+            const washObj =
+                {};
 
 
             allPlayers.forEach(
+
                 p => {
 
-                    summaryObj[p] = 0;
-                    countObj[p] = 0;
-                    donationObj[p] = 0;
-                    washObj[p] = 0;
+                    summaryObj[p] =
+                        0;
+
+                    countObj[p] =
+                        0;
+
+                    donationObj[p] =
+                        0;
+
+                    washObj[p] =
+                        0;
                 }
             );
 
 
             records.forEach(
+
                 r => {
 
                     const details =
@@ -1728,56 +2189,78 @@
                         Object.keys(
                             details
                         ).sort(
-                            (a, b) =>
-                                details[b] -
+
+                            (
+                                a,
+                                b
+                            ) =>
+
+                                details[b]
+                                -
                                 details[a]
+
                         );
 
 
                     const p3 =
-                        sortedThisGame[2];
+                        sortedThisGame[
+                            2
+                        ];
+
 
                     const p4 =
-                        sortedThisGame[3];
+                        sortedThisGame[
+                            3
+                        ];
 
 
-                    /* 第三名 */
+                    /* 第三名本人 */
 
-                    if (p3) {
+                    if (
+                        p3
+                    ) {
 
                         if (
                             r.donation3Type ===
                             "wash"
                         ) {
 
-                            washObj[p3] += 1;
+                            washObj[p3] +=
+                                1;
 
                         } else {
 
                             donationObj[p3] +=
+
                                 Number(
-                                    r.donation3 || 0
+                                    r.donation3 ||
+                                    0
                                 );
                         }
                     }
 
 
-                    /* 第四名 */
+                    /* 第四名本人 */
 
-                    if (p4) {
+                    if (
+                        p4
+                    ) {
 
                         if (
                             r.donation4Type ===
                             "wash"
                         ) {
 
-                            washObj[p4] += 1;
+                            washObj[p4] +=
+                                1;
 
                         } else {
 
                             donationObj[p4] +=
+
                                 Number(
-                                    r.donation4 || 0
+                                    r.donation4 ||
+                                    0
                                 );
                         }
                     }
@@ -1789,7 +2272,8 @@
                         r.parasite3Name &&
                         donationObj[
                             r.parasite3Name
-                        ] !== undefined
+                        ] !==
+                        undefined
                     ) {
 
                         if (
@@ -1799,13 +2283,15 @@
 
                             washObj[
                                 r.parasite3Name
-                            ] += 1;
+                            ] +=
+                                1;
 
                         } else {
 
                             donationObj[
                                 r.parasite3Name
                             ] +=
+
                                 Number(
                                     r.parasite3Donation ||
                                     0
@@ -1820,7 +2306,8 @@
                         r.parasite4Name &&
                         donationObj[
                             r.parasite4Name
-                        ] !== undefined
+                        ] !==
+                        undefined
                     ) {
 
                         if (
@@ -1830,13 +2317,15 @@
 
                             washObj[
                                 r.parasite4Name
-                            ] += 1;
+                            ] +=
+                                1;
 
                         } else {
 
                             donationObj[
                                 r.parasite4Name
                             ] +=
+
                                 Number(
                                     r.parasite4Donation ||
                                     0
@@ -1845,7 +2334,7 @@
                     }
 
 
-                    /* 積分與場次 */
+                    /* 積分、場次 */
 
                     for (
                         let name
@@ -1853,14 +2342,23 @@
                     ) {
 
                         if (
-                            summaryObj[name] !==
+                            summaryObj[
+                                name
+                            ] !==
                             undefined
                         ) {
 
-                            summaryObj[name] +=
-                                details[name];
+                            summaryObj[
+                                name
+                            ] +=
+                                details[
+                                    name
+                                ];
 
-                            countObj[name] +=
+
+                            countObj[
+                                name
+                            ] +=
                                 1;
                         }
                     }
@@ -1869,10 +2367,39 @@
 
 
             /* ===============================
+               更新捐款總額
+            =============================== */
+
+            currentDonationGrandTotal =
+                Object.values(
+                    donationObj
+                ).reduce(
+
+                    (
+                        sum,
+                        value
+                    ) =>
+
+                        sum +
+                        Number(
+                            value ||
+                            0
+                        ),
+
+                    0
+
+                );
+
+
+            updateGrandTotal();
+
+
+            /* ===============================
                總積分排行榜
             =============================== */
 
             const medals = [
+
                 "👑",
                 "🥈",
                 "🥉",
@@ -1881,6 +2408,7 @@
                 "6️⃣",
                 "7️⃣",
                 "8️⃣"
+
             ];
 
 
@@ -1888,9 +2416,16 @@
                 Object.keys(
                     summaryObj
                 ).sort(
-                    (a, b) =>
-                        summaryObj[b] -
+
+                    (
+                        a,
+                        b
+                    ) =>
+
+                        summaryObj[b]
+                        -
                         summaryObj[a]
+
                 );
 
 
@@ -1899,44 +2434,77 @@
 
 
             sortedPlayers.forEach(
-                (name, index) => {
+
+                (
+                    name,
+                    index
+                ) => {
 
                     const total =
-                        summaryObj[name];
+                        summaryObj[
+                            name
+                        ];
+
 
                     const color =
+
                         total > 0
+
                             ? "color:#27ae60;"
-                            : total < 0
-                                ? "color:#e74c3c;"
-                                : "color:#7f8c8d;";
+
+                            :
+
+                        total < 0
+
+                            ? "color:#e74c3c;"
+
+                            :
+
+                            "color:#7f8c8d;";
+
 
                     const sign =
+
                         total > 0
+
                             ? "+"
+
                             : "";
 
+
                     const rankClass =
+
                         index === 0 &&
                         total > 0
+
                             ? "top-1"
+
                             : "";
 
 
                     rankHTML += `
+
                         <li class="rank-item ${rankClass}">
 
                             <span>
+
                                 ${medals[index]}
+
                                 第 ${index + 1} 名：
+
                                 ${name}
+
                             </span>
 
+
                             <span style="${color}">
+
                                 ${sign}${total}
+
                             </span>
 
                         </li>
+
                     `;
                 }
             );
@@ -1958,21 +2526,44 @@
                 Object.keys(
                     summaryObj
                 ).sort(
-                    (a, b) => {
+
+                    (
+                        a,
+                        b
+                    ) => {
 
                         const avgA =
+
                             countObj[a] > 0
-                                ? summaryObj[a] /
-                                  countObj[a]
-                                : 0;
+
+                                ?
+
+                                summaryObj[a] /
+                                countObj[a]
+
+                                :
+
+                                0;
+
 
                         const avgB =
-                            countObj[b] > 0
-                                ? summaryObj[b] /
-                                  countObj[b]
-                                : 0;
 
-                        return avgB - avgA;
+                            countObj[b] > 0
+
+                                ?
+
+                                summaryObj[b] /
+                                countObj[b]
+
+                                :
+
+                                0;
+
+
+                        return (
+                            avgB -
+                            avgA
+                        );
                     }
                 );
 
@@ -1982,49 +2573,92 @@
 
 
             sortedByAvg.forEach(
-                (name, index) => {
+
+                (
+                    name,
+                    index
+                ) => {
 
                     const count =
-                        countObj[name];
+                        countObj[
+                            name
+                        ];
+
 
                     const avg =
+
                         count > 0
-                            ? (
-                                summaryObj[name] /
+
+                            ?
+
+                            (
+                                summaryObj[
+                                    name
+                                ] /
                                 count
-                            ).toFixed(1)
-                            : "0.0";
+                            ).toFixed(
+                                1
+                            )
+
+                            :
+
+                            "0.0";
+
 
                     const numAvg =
-                        parseFloat(avg);
+                        parseFloat(
+                            avg
+                        );
+
 
                     const color =
+
                         numAvg > 0
+
                             ? "color:#27ae60;"
-                            : numAvg < 0
-                                ? "color:#e74c3c;"
-                                : "color:#7f8c8d;";
+
+                            :
+
+                        numAvg < 0
+
+                            ? "color:#e74c3c;"
+
+                            :
+
+                            "color:#7f8c8d;";
+
 
                     const sign =
+
                         numAvg > 0
+
                             ? "+"
+
                             : "";
 
+
                     const rankClass =
+
                         index === 0 &&
                         numAvg > 0
+
                             ? "top-1"
+
                             : "";
 
 
                     avgRankHTML += `
+
                         <li class="rank-item ${rankClass}">
 
                             <span>
 
                                 ${medals[index]}
+
                                 第 ${index + 1} 名：
+
                                 ${name}
+
 
                                 <span
                                     style="
@@ -2032,16 +2666,22 @@
                                         color:#888;
                                     "
                                 >
+
                                     (共 ${count} 場)
+
                                 </span>
 
                             </span>
 
+
                             <span style="${color}">
+
                                 ${sign}${avg}
+
                             </span>
 
                         </li>
+
                     `;
                 }
             );
@@ -2060,41 +2700,58 @@
             =============================== */
 
             if (
-                records.length === 0
+                records.length ===
+                0
             ) {
 
                 listEl.innerHTML = `
+
                     <p
                         style="
                             color:#7f8c8d;
                             text-align:center;
                         "
                     >
+
                         尚無打牌紀錄
+
                     </p>
+
                 `;
 
             } else {
 
-                const groupedByDate = {};
+                const groupedByDate =
+                    {};
 
 
                 records.forEach(
+
                     r => {
 
                         const d =
+
                             r.date ||
+
                             "未分類日期";
 
+
                         if (
-                            !groupedByDate[d]
+                            !groupedByDate[
+                                d
+                            ]
                         ) {
 
-                            groupedByDate[d] =
+                            groupedByDate[
+                                d
+                            ] =
                                 [];
                         }
 
-                        groupedByDate[d].push(
+
+                        groupedByDate[
+                            d
+                        ].push(
                             r
                         );
                     }
@@ -2105,16 +2762,29 @@
                     Object.keys(
                         groupedByDate
                     ).sort(
-                        (a, b) =>
-                            new Date(b) -
-                            new Date(a)
+
+                        (
+                            a,
+                            b
+                        ) =>
+
+                            new Date(
+                                b
+                            )
+                            -
+                            new Date(
+                                a
+                            )
+
                     );
 
 
-                let historyHTML = "";
+                let historyHTML =
+                    "";
 
 
                 sortedDates.forEach(
+
                     dateStr => {
 
                         const dayRecords =
@@ -2124,28 +2794,43 @@
 
 
                         historyHTML += `
+
                             <div class="date-group">
 
                                 <div class="date-header">
-                                    📅 記錄日期：${dateStr}
+
+                                    📅 記錄日期：
+                                    ${dateStr}
+
                                 </div>
 
                                 <ul class="date-records">
+
                         `;
 
 
                         for (
+
                             let i =
                                 dayRecords.length - 1;
-                            i >= 0;
+
+                            i >=
+                                0;
+
                             i--
+
                         ) {
 
                             const r =
-                                dayRecords[i];
+                                dayRecords[
+                                    i
+                                ];
+
 
                             const gameTitle =
+
                                 `第 ${i + 1} 將`;
+
 
                             const detailStrs =
                                 [];
@@ -2155,18 +2840,34 @@
                                 Object.keys(
                                     r.details
                                 ).sort(
-                                    (a, b) =>
-                                        r.details[b] -
+
+                                    (
+                                        a,
+                                        b
+                                    ) =>
+
+                                        r.details[b]
+                                        -
                                         r.details[a]
+
                                 );
 
 
                             const p3 =
-                                sortedThisGame[2] ||
+
+                                sortedThisGame[
+                                    2
+                                ]
+                                ||
                                 "第三名";
 
+
                             const p4 =
-                                sortedThisGame[3] ||
+
+                                sortedThisGame[
+                                    3
+                                ]
+                                ||
                                 "第四名";
 
 
@@ -2176,34 +2877,55 @@
                             ) {
 
                                 const amt =
-                                    r.details[name];
+                                    r.details[
+                                        name
+                                    ];
+
 
                                 const color =
+
                                     amt >= 0
+
                                         ? "color:#27ae60;"
+
                                         : "color:#e74c3c;";
 
+
                                 const sign =
+
                                     amt >= 0
+
                                         ? "+"
+
                                         : "";
 
 
                                 detailStrs.push(
+
                                     `<span style="${color}">
                                         ${name} ${sign}${amt}
                                     </span>`
+
                                 );
                             }
 
 
-                            /* 第三名 */
+                            /* 第三名選項 */
 
-                            let selected3None = "";
-                            let selected3Zero = "";
-                            let selected3Fifty = "";
-                            let selected3Hundred = "";
-                            let selected3Wash = "";
+                            let selected3None =
+                                "";
+
+                            let selected3Zero =
+                                "";
+
+                            let selected3Fifty =
+                                "";
+
+                            let selected3Hundred =
+                                "";
+
+                            let selected3Wash =
+                                "";
 
 
                             if (
@@ -2219,7 +2941,8 @@
                                 "money" &&
                                 Number(
                                     r.donation3
-                                ) === 0
+                                ) ===
+                                0
                             ) {
 
                                 selected3Zero =
@@ -2228,7 +2951,8 @@
                             } else if (
                                 Number(
                                     r.donation3
-                                ) === 50
+                                ) ===
+                                50
                             ) {
 
                                 selected3Fifty =
@@ -2237,7 +2961,8 @@
                             } else if (
                                 Number(
                                     r.donation3
-                                ) === 100
+                                ) ===
+                                100
                             ) {
 
                                 selected3Hundred =
@@ -2250,13 +2975,22 @@
                             }
 
 
-                            /* 第四名 */
+                            /* 第四名選項 */
 
-                            let selected4None = "";
-                            let selected4Zero = "";
-                            let selected4Fifty = "";
-                            let selected4Hundred = "";
-                            let selected4Wash = "";
+                            let selected4None =
+                                "";
+
+                            let selected4Zero =
+                                "";
+
+                            let selected4Fifty =
+                                "";
+
+                            let selected4Hundred =
+                                "";
+
+                            let selected4Wash =
+                                "";
 
 
                             if (
@@ -2272,7 +3006,8 @@
                                 "money" &&
                                 Number(
                                     r.donation4
-                                ) === 0
+                                ) ===
+                                0
                             ) {
 
                                 selected4Zero =
@@ -2281,7 +3016,8 @@
                             } else if (
                                 Number(
                                     r.donation4
-                                ) === 50
+                                ) ===
+                                50
                             ) {
 
                                 selected4Fifty =
@@ -2290,7 +3026,8 @@
                             } else if (
                                 Number(
                                     r.donation4
-                                ) === 100
+                                ) ===
+                                100
                             ) {
 
                                 selected4Hundred =
@@ -2310,70 +3047,107 @@
                                     r.details
                                 );
 
+
                             const candidates =
                                 allPlayers.filter(
+
                                     name =>
+
                                         !gamePlayers.includes(
                                             name
                                         )
+
                                 );
 
 
                             const savedP3Name =
+
                                 r.parasite3Name ||
+
                                 "";
 
+
                             const savedP4Name =
+
                                 r.parasite4Name ||
+
                                 "";
 
 
                             let parasite3Options =
+
                                 `<option value="">不寄生</option>`;
 
+
                             let parasite4Options =
+
                                 `<option value="">不寄生</option>`;
 
 
                             candidates.forEach(
+
                                 name => {
 
                                     parasite3Options += `
+
                                         <option
                                             value="${name}"
                                             ${
-                                                savedP3Name === name
+                                                savedP3Name ===
+                                                name
+
                                                     ? "selected"
+
                                                     : ""
                                             }
                                         >
+
                                             ${name}
+
                                         </option>
+
                                     `;
 
+
                                     parasite4Options += `
+
                                         <option
                                             value="${name}"
                                             ${
-                                                savedP4Name === name
+                                                savedP4Name ===
+                                                name
+
                                                     ? "selected"
+
                                                     : ""
                                             }
                                         >
+
                                             ${name}
+
                                         </option>
+
                                     `;
                                 }
                             );
 
 
-                            /* 第三名寄生捐款 */
+                            /* 寄生第三名 */
 
-                            let p3None = "";
-                            let p3Zero = "";
-                            let p3Fifty = "";
-                            let p3Hundred = "";
-                            let p3Wash = "";
+                            let p3None =
+                                "";
+
+                            let p3Zero =
+                                "";
+
+                            let p3Fifty =
+                                "";
+
+                            let p3Hundred =
+                                "";
+
+                            let p3Wash =
+                                "";
 
 
                             if (
@@ -2389,7 +3163,8 @@
                                 "money" &&
                                 Number(
                                     r.parasite3Donation
-                                ) === 0
+                                ) ===
+                                0
                             ) {
 
                                 p3Zero =
@@ -2398,7 +3173,8 @@
                             } else if (
                                 Number(
                                     r.parasite3Donation
-                                ) === 50
+                                ) ===
+                                50
                             ) {
 
                                 p3Fifty =
@@ -2407,7 +3183,8 @@
                             } else if (
                                 Number(
                                     r.parasite3Donation
-                                ) === 100
+                                ) ===
+                                100
                             ) {
 
                                 p3Hundred =
@@ -2420,13 +3197,22 @@
                             }
 
 
-                            /* 第四名寄生捐款 */
+                            /* 寄生第四名 */
 
-                            let p4None = "";
-                            let p4Zero = "";
-                            let p4Fifty = "";
-                            let p4Hundred = "";
-                            let p4Wash = "";
+                            let p4None =
+                                "";
+
+                            let p4Zero =
+                                "";
+
+                            let p4Fifty =
+                                "";
+
+                            let p4Hundred =
+                                "";
+
+                            let p4Wash =
+                                "";
 
 
                             if (
@@ -2442,7 +3228,8 @@
                                 "money" &&
                                 Number(
                                     r.parasite4Donation
-                                ) === 0
+                                ) ===
+                                0
                             ) {
 
                                 p4Zero =
@@ -2451,7 +3238,8 @@
                             } else if (
                                 Number(
                                     r.parasite4Donation
-                                ) === 50
+                                ) ===
+                                50
                             ) {
 
                                 p4Fifty =
@@ -2460,7 +3248,8 @@
                             } else if (
                                 Number(
                                     r.parasite4Donation
-                                ) === 100
+                                ) ===
+                                100
                             ) {
 
                                 p4Hundred =
@@ -2474,22 +3263,35 @@
 
 
                             const p3Display =
-                                savedP3Name !== ""
+
+                                savedP3Name !==
+                                ""
+
                                     ? "flex"
+
                                     : "none";
 
+
                             const p4Display =
-                                savedP4Name !== ""
+
+                                savedP4Name !==
+                                ""
+
                                     ? "flex"
+
                                     : "none";
 
 
                             historyHTML += `
+
                                 <li>
+
 
                                     <div class="record-main">
 
+
                                         <div>
+
 
                                             <strong
                                                 style="
@@ -2497,8 +3299,11 @@
                                                     margin-right:8px;
                                                 "
                                             >
+
                                                 [${gameTitle}]
+
                                             </strong>
+
 
                                             <span
                                                 style="
@@ -2507,19 +3312,25 @@
                                                     flex-wrap:wrap;
                                                 "
                                             >
+
                                                 ${detailStrs.join(" | ")}
+
                                             </span>
 
                                         </div>
 
+
                                         <div class="record-time">
+
                                             ${r.time || ""}
+
                                         </div>
 
                                     </div>
 
 
                                     <div class="game-donation-inputs">
+
 
                                         <div class="donation-person">
 
@@ -2530,6 +3341,7 @@
                                             </strong>
 
                                             (3名)：
+
 
                                             <select
                                                 id="don3_amt_${r.id}"
@@ -2586,6 +3398,7 @@
 
                                             (4名)：
 
+
                                             <select
                                                 id="don4_amt_${r.id}"
                                             >
@@ -2633,22 +3446,30 @@
 
                                         <div class="parasite-section">
 
+
                                             <div class="parasite-title">
+
                                                 🪱 寄生
+
                                             </div>
 
 
                                             <div class="parasite-row">
 
                                                 <strong>
+
                                                     寄生 ${p3}（3名）：
+
                                                 </strong>
+
 
                                                 <select
                                                     id="parasite3_name_${r.id}"
                                                     onchange="toggleParasiteDonation('${r.id}', 3)"
                                                 >
+
                                                     ${parasite3Options}
+
                                                 </select>
 
 
@@ -2659,8 +3480,11 @@
                                                 >
 
                                                     <span>
+
                                                         寄生人捐款：
+
                                                     </span>
+
 
                                                     <select
                                                         id="parasite3_amt_${r.id}"
@@ -2712,14 +3536,19 @@
                                             <div class="parasite-row">
 
                                                 <strong>
+
                                                     寄生 ${p4}（4名）：
+
                                                 </strong>
+
 
                                                 <select
                                                     id="parasite4_name_${r.id}"
                                                     onchange="toggleParasiteDonation('${r.id}', 4)"
                                                 >
+
                                                     ${parasite4Options}
+
                                                 </select>
 
 
@@ -2730,8 +3559,11 @@
                                                 >
 
                                                     <span>
+
                                                         寄生人捐款：
+
                                                     </span>
+
 
                                                     <select
                                                         id="parasite4_amt_${r.id}"
@@ -2789,15 +3621,20 @@
                                                 class="small-confirm-btn"
                                                 onclick="saveDonation('${r.id}')"
                                             >
+
                                                 確認
+
                                             </button>
+
 
                                             <button
                                                 type="button"
                                                 class="small-delete-btn"
                                                 onclick="deleteRecord('${r.id}')"
                                             >
+
                                                 刪除此筆
+
                                             </button>
 
                                         </div>
@@ -2805,13 +3642,17 @@
                                     </div>
 
                                 </li>
+
                             `;
                         }
 
 
                         historyHTML += `
+
                                 </ul>
+
                             </div>
+
                         `;
                     }
                 );
@@ -2830,9 +3671,16 @@
                 Object.keys(
                     donationObj
                 ).sort(
-                    (a, b) =>
-                        donationObj[b] -
+
+                    (
+                        a,
+                        b
+                    ) =>
+
+                        donationObj[b]
+                        -
                         donationObj[a]
+
                 );
 
 
@@ -2841,13 +3689,17 @@
 
 
             sortedDonationPlayers.forEach(
+
                 name => {
 
                     donationHTML += `
+
                         <li class="rank-item">
 
                             <span>
+
                                 🎁 ${name}
+
                             </span>
 
                             <span
@@ -2855,10 +3707,13 @@
                                     color:#d35400;
                                 "
                             >
+
                                 $${donationObj[name]}
+
                             </span>
 
                         </li>
+
                     `;
                 }
             );
@@ -2880,7 +3735,11 @@
                 Object.keys(
                     washObj
                 ).sort(
-                    (a, b) => {
+
+                    (
+                        a,
+                        b
+                    ) => {
 
                         if (
                             washObj[b] !==
@@ -2888,15 +3747,25 @@
                         ) {
 
                             return (
-                                washObj[b] -
+                                washObj[b]
+                                -
                                 washObj[a]
                             );
                         }
 
 
                         return (
-                            allPlayers.indexOf(a) -
-                            allPlayers.indexOf(b)
+
+                            allPlayers.indexOf(
+                                a
+                            )
+
+                            -
+
+                            allPlayers.indexOf(
+                                b
+                            )
+
                         );
                     }
                 );
@@ -2907,36 +3776,55 @@
 
 
             sortedWashPlayers.forEach(
-                (name, index) => {
+
+                (
+                    name,
+                    index
+                ) => {
 
                     const washCount =
-                        washObj[name];
+                        washObj[
+                            name
+                        ];
+
 
                     const rankClass =
+
                         index === 0 &&
                         washCount > 0
+
                             ? "top-1"
+
                             : "";
 
 
                     washHTML += `
+
                         <li class="rank-item ${rankClass}">
 
                             <span>
+
                                 ${medals[index]}
+
                                 第 ${index + 1} 名：
+
                                 ${name}
+
                             </span>
+
 
                             <span
                                 style="
                                     color:#2980b9;
                                 "
                             >
+
                                 🍽️ ${washCount} 次
+
                             </span>
 
                         </li>
+
                     `;
                 }
             );
@@ -2968,6 +3856,7 @@
         <h3>
             1. 選擇打牌日期與 4 位玩家
         </h3>
+
 
         <div class="form-group">
 
@@ -3022,7 +3911,9 @@
             2. 輸入各家積分
         </h3>
 
-        <div id="fourInputsContainer">
+        <div
+            id="fourInputsContainer"
+        >
         </div>
 
         <button
@@ -3043,7 +3934,9 @@
             🏆 總積分排行榜
         </h3>
 
-        <div id="rankContainer">
+        <div
+            id="rankContainer"
+        >
         </div>
 
     </div>
@@ -3057,13 +3950,15 @@
             📈 平均分排行榜（總積分 ÷ 場次）
         </h3>
 
-        <div id="avgRankContainer">
+        <div
+            id="avgRankContainer"
+        >
         </div>
 
     </div>
 
 
-    <!-- 歷史 -->
+    <!-- 歷史紀錄 -->
 
     <div class="card">
 
@@ -3098,7 +3993,9 @@
             🎁 捐款結果總計
         </h3>
 
-        <div id="donationSummaryContainer">
+        <div
+            id="donationSummaryContainer"
+        >
         </div>
 
     </div>
@@ -3112,7 +4009,9 @@
             🍽️ 洗碗排行榜
         </h3>
 
-        <div id="washRankContainer">
+        <div
+            id="washRankContainer"
+        >
         </div>
 
     </div>
@@ -3132,9 +4031,11 @@
             <select
                 id="exitFeePlayer"
             >
+
                 <option value="">
                     請選擇玩家
                 </option>
+
             </select>
 
 
@@ -3158,6 +4059,7 @@
             💰 離場費累計
         </h4>
 
+
         <div
             id="exitFeeSummaryContainer"
         >
@@ -3167,6 +4069,7 @@
         <h4>
             📋 離場費紀錄
         </h4>
+
 
         <div
             class="exit-fee-history"
@@ -3193,6 +4096,42 @@
         >
             清空全部離場費（需管理者密碼）
         </button>
+
+    </div>
+
+
+    <!-- 總金額 -->
+
+    <div class="card">
+
+        <h3>
+            💰 總金額（捐款＋離場費）
+        </h3>
+
+
+        <div class="grand-total-box">
+
+            <span class="grand-total-label">
+                目前總金額
+            </span>
+
+
+            <span
+                class="grand-total-amount"
+                id="grandTotalAmount"
+            >
+                $0
+            </span>
+
+        </div>
+
+
+        <div
+            class="grand-total-note"
+            id="grandTotalDetail"
+        >
+            捐款 $0 ＋ 離場費 $0
+        </div>
 
     </div>
 
