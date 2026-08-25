@@ -20,6 +20,12 @@
             color: #2c3e50;
         }
 
+        h4 {
+            color: #2c3e50;
+            margin-top: 18px;
+            margin-bottom: 8px;
+        }
+
         .card {
             background: white;
             padding: 20px;
@@ -239,6 +245,47 @@
             background: white;
         }
 
+        /* 寄生功能 */
+        .parasite-section {
+            width: 100%;
+            border-top: 1px solid #e2e8f0;
+            margin-top: 4px;
+            padding-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .parasite-title {
+            font-weight: bold;
+            color: #4a5568;
+        }
+
+        .parasite-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .parasite-row select {
+            width: 105px;
+        }
+
+        .parasite-donation-wrap {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .record-action-row {
+            width: 100%;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
         /* 確認按鈕 */
         .small-confirm-btn {
             padding: 5px 14px;
@@ -256,7 +303,7 @@
             background-color: #1e8449;
         }
 
-        /* 單筆刪除按鈕 */
+        /* 刪除按鈕 */
         .small-delete-btn {
             padding: 5px 10px;
             font-size: 12px;
@@ -269,6 +316,77 @@
         }
 
         .small-delete-btn:hover {
+            background-color: #c0392b;
+        }
+
+        /* 離場費 */
+        .exit-fee-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            background: #f8fafc;
+            padding: 12px;
+            border: 1px dashed #cbd5e0;
+            border-radius: 6px;
+        }
+
+        .exit-fee-controls select {
+            flex: 1;
+            min-width: 180px;
+        }
+
+        .exit-fee-note {
+            font-size: 13px;
+            color: #718096;
+            margin-top: 8px;
+        }
+
+        .exit-fee-history {
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+
+        .exit-fee-history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 9px 12px;
+            border-bottom: 1px solid #edf2f7;
+            gap: 10px;
+        }
+
+        .exit-fee-history-item:last-child {
+            border-bottom: none;
+        }
+
+        .exit-fee-player {
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .exit-fee-amount {
+            color: #d35400;
+            font-weight: bold;
+        }
+
+        .exit-fee-time {
+            color: #a0aec0;
+            font-size: 12px;
+        }
+
+        .exit-clear-btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+
+        .exit-clear-btn:hover {
             background-color: #c0392b;
         }
     </style>
@@ -284,6 +402,7 @@
             collection,
             addDoc,
             setDoc,
+            getDocs,
             deleteDoc,
             doc,
             onSnapshot,
@@ -360,14 +479,18 @@
 
         window.onload = function() {
 
-            const today = new Date()
-                .toISOString()
-                .split("T")[0];
+            const today =
+                new Date()
+                    .toISOString()
+                    .split("T")[0];
 
-            document.getElementById("gameDate").value = today;
+            document.getElementById(
+                "gameDate"
+            ).value = today;
 
             renderSelector();
             renderInputs();
+            renderExitFeePlayerOptions();
         };
 
 
@@ -380,7 +503,9 @@
             selectedPlayers.forEach(p => {
 
                 const inputEl =
-                    document.getElementById(`amt_${p}`);
+                    document.getElementById(
+                        `amt_${p}`
+                    );
 
                 if (
                     inputEl &&
@@ -389,7 +514,6 @@
                     playerStates[p].score =
                         inputEl.value;
                 }
-
             });
 
 
@@ -407,7 +531,9 @@
             }
 
 
-            if (selectedPlayers.length >= 4) {
+            if (
+                selectedPlayers.length >= 4
+            ) {
 
                 const removedPlayer =
                     selectedPlayers.shift();
@@ -432,7 +558,7 @@
 
 
         /* ===============================
-           顯示玩家選擇按鈕
+           玩家選擇按鈕
         =============================== */
 
         function renderSelector() {
@@ -447,7 +573,7 @@
 
             allPlayers.forEach(p => {
 
-                const isActive =
+                const active =
                     selectedPlayers.includes(p)
                         ? "active"
                         : "";
@@ -455,7 +581,7 @@
                 html += `
                     <button
                         type="button"
-                        class="select-player-btn ${isActive}"
+                        class="select-player-btn ${active}"
                         onclick="togglePlayer('${p}')"
                     >
                         ${p}
@@ -469,7 +595,7 @@
 
 
         /* ===============================
-           切換贏 / 輸
+           切換輸贏
         =============================== */
 
         window.toggleType = function(name) {
@@ -481,23 +607,16 @@
 
 
             if (inputEl) {
+
                 playerStates[name].score =
                     inputEl.value;
             }
 
 
-            if (
+            playerStates[name].type =
                 playerStates[name].type === "win"
-            ) {
-
-                playerStates[name].type =
-                    "lose";
-
-            } else {
-
-                playerStates[name].type =
-                    "win";
-            }
+                    ? "lose"
+                    : "win";
 
 
             renderInputs();
@@ -505,7 +624,7 @@
 
 
         /* ===============================
-           顯示四位玩家積分輸入
+           顯示積分輸入
         =============================== */
 
         function renderInputs() {
@@ -573,20 +692,19 @@
         }
 
 
-        /* ===============================
-           更新積分
-        =============================== */
-
-        window.updateScore = function(name, val) {
+        window.updateScore =
+        function(name, val) {
 
             if (playerStates[name]) {
-                playerStates[name].score = val;
+
+                playerStates[name].score =
+                    val;
             }
         };
 
 
         /* ===============================
-           新增一局紀錄
+           新增牌局
         =============================== */
 
         window.addRecord =
@@ -623,7 +741,9 @@
                     ).value;
 
                 const num =
-                    parseFloat(amtVal);
+                    parseFloat(
+                        amtVal
+                    );
 
 
                 if (
@@ -640,8 +760,8 @@
 
 
                 const signedAmount =
-                    playerStates[name].type
-                    === "win"
+                    playerStates[name].type ===
+                    "win"
                         ? num
                         : -num;
 
@@ -709,6 +829,24 @@
                         donation4Type:
                             "",
 
+                        parasite3Name:
+                            "",
+
+                        parasite3Donation:
+                            0,
+
+                        parasite3Type:
+                            "",
+
+                        parasite4Name:
+                            "",
+
+                        parasite4Donation:
+                            0,
+
+                        parasite4Type:
+                            "",
+
                         timestamp:
                             Date.now()
                     }
@@ -720,8 +858,9 @@
                     in playerStates
                 ) {
 
-                    playerStates[name].score =
-                        "";
+                    playerStates[
+                        name
+                    ].score = "";
                 }
 
 
@@ -746,8 +885,48 @@
 
 
         /* ===============================
-           確認捐款 / 洗碗
-           新增與修改皆使用此功能
+           寄生選擇
+        =============================== */
+
+        window.toggleParasiteDonation =
+        function(docId, rank) {
+
+            const nameSelect =
+                document.getElementById(
+                    `parasite${rank}_name_${docId}`
+                );
+
+            const donationWrap =
+                document.getElementById(
+                    `parasite${rank}_donation_wrap_${docId}`
+                );
+
+            const donationSelect =
+                document.getElementById(
+                    `parasite${rank}_amt_${docId}`
+                );
+
+
+            if (
+                nameSelect.value !== ""
+            ) {
+
+                donationWrap.style.display =
+                    "flex";
+
+            } else {
+
+                donationWrap.style.display =
+                    "none";
+
+                donationSelect.value =
+                    "";
+            }
+        };
+
+
+        /* ===============================
+           捐款 / 洗碗 / 寄生
         =============================== */
 
         window.saveDonation =
@@ -789,18 +968,15 @@
                     ? 0
                     : Number(choice3);
 
-
             const amount4 =
                 choice4 === "wash"
                     ? 0
                     : Number(choice4);
 
-
             const type3 =
                 choice3 === "wash"
                     ? "wash"
                     : "money";
-
 
             const type4 =
                 choice4 === "wash"
@@ -808,18 +984,110 @@
                     : "money";
 
 
+            const parasite3Name =
+                document.getElementById(
+                    `parasite3_name_${docId}`
+                ).value;
+
+            const parasite3Select =
+                document.getElementById(
+                    `parasite3_amt_${docId}`
+                );
+
+            let parasite3Donation = 0;
+            let parasite3Type = "";
+
+
+            if (
+                parasite3Name !== ""
+            ) {
+
+                const parasite3Choice =
+                    parasite3Select.value;
+
+
+                if (
+                    parasite3Choice === ""
+                ) {
+
+                    alert(
+                        "請選擇寄生第三名玩家的捐款結果！"
+                    );
+
+                    return;
+                }
+
+
+                parasite3Donation =
+                    parasite3Choice === "wash"
+                        ? 0
+                        : Number(
+                            parasite3Choice
+                        );
+
+                parasite3Type =
+                    parasite3Choice === "wash"
+                        ? "wash"
+                        : "money";
+            }
+
+
+            const parasite4Name =
+                document.getElementById(
+                    `parasite4_name_${docId}`
+                ).value;
+
+            const parasite4Select =
+                document.getElementById(
+                    `parasite4_amt_${docId}`
+                );
+
+            let parasite4Donation = 0;
+            let parasite4Type = "";
+
+
+            if (
+                parasite4Name !== ""
+            ) {
+
+                const parasite4Choice =
+                    parasite4Select.value;
+
+
+                if (
+                    parasite4Choice === ""
+                ) {
+
+                    alert(
+                        "請選擇寄生第四名玩家的捐款結果！"
+                    );
+
+                    return;
+                }
+
+
+                parasite4Donation =
+                    parasite4Choice === "wash"
+                        ? 0
+                        : Number(
+                            parasite4Choice
+                        );
+
+                parasite4Type =
+                    parasite4Choice === "wash"
+                        ? "wash"
+                        : "money";
+            }
+
+
             try {
 
-                const docRef =
+                await setDoc(
                     doc(
                         db,
                         "mahjong_records_v7",
                         docId
-                    );
-
-
-                await setDoc(
-                    docRef,
+                    ),
                     {
                         donation3:
                             amount3,
@@ -831,7 +1099,25 @@
                             type3,
 
                         donation4Type:
-                            type4
+                            type4,
+
+                        parasite3Name:
+                            parasite3Name,
+
+                        parasite3Donation:
+                            parasite3Donation,
+
+                        parasite3Type:
+                            parasite3Type,
+
+                        parasite4Name:
+                            parasite4Name,
+
+                        parasite4Donation:
+                            parasite4Donation,
+
+                        parasite4Type:
+                            parasite4Type
                     },
                     {
                         merge: true
@@ -858,7 +1144,7 @@
 
 
         /* ===============================
-           刪除單筆牌局紀錄
+           刪除單筆牌局
         =============================== */
 
         window.deleteRecord =
@@ -885,15 +1171,13 @@
             }
 
 
-            const confirmDelete =
-                confirm(
+            if (
+                !confirm(
 `確定要刪除這一筆牌局紀錄嗎？
 
 此筆積分與捐款資料都會一起刪除，而且無法復原！`
-                );
-
-
-            if (!confirmDelete) {
+                )
+            ) {
                 return;
             }
 
@@ -928,7 +1212,225 @@
 
 
         /* ===============================
-           Firebase 即時監聽
+           離場費玩家選單
+        =============================== */
+
+        function renderExitFeePlayerOptions() {
+
+            const select =
+                document.getElementById(
+                    "exitFeePlayer"
+                );
+
+
+            let html = `
+                <option value="">
+                    請選擇玩家
+                </option>
+            `;
+
+
+            allPlayers.forEach(
+                name => {
+
+                    html += `
+                        <option value="${name}">
+                            ${name}
+                        </option>
+                    `;
+                }
+            );
+
+
+            select.innerHTML =
+                html;
+        }
+
+
+        /* ===============================
+           儲存離場費
+        =============================== */
+
+        window.saveExitFee =
+        async function() {
+
+            const select =
+                document.getElementById(
+                    "exitFeePlayer"
+                );
+
+            const player =
+                select.value;
+
+
+            if (
+                player === ""
+            ) {
+
+                alert(
+                    "請先選擇要支付離場費的玩家！"
+                );
+
+                return;
+            }
+
+
+            const now =
+                new Date();
+
+
+            const dateStr =
+                `${now.getFullYear()}-${String(
+                    now.getMonth() + 1
+                ).padStart(2, "0")}-${String(
+                    now.getDate()
+                ).padStart(2, "0")}`;
+
+
+            const timeStr =
+                `${String(
+                    now.getHours()
+                ).padStart(2, "0")}:${String(
+                    now.getMinutes()
+                ).padStart(2, "0")}`;
+
+
+            try {
+
+                await addDoc(
+                    collection(
+                        db,
+                        "mahjong_exit_fees_v1"
+                    ),
+                    {
+                        player:
+                            player,
+
+                        amount:
+                            50,
+
+                        date:
+                            dateStr,
+
+                        time:
+                            timeStr,
+
+                        timestamp:
+                            Date.now()
+                    }
+                );
+
+
+                select.value =
+                    "";
+
+
+                alert(
+                    `${player} 的 50 元離場費已儲存！`
+                );
+
+            } catch (e) {
+
+                console.error(
+                    "離場費寫入錯誤：",
+                    e
+                );
+
+                alert(
+                    "離場費儲存失敗，請檢查網路連線！"
+                );
+            }
+        };
+
+
+        /* ===============================
+           清空全部離場費
+        =============================== */
+
+        window.clearAllExitFees =
+        async function() {
+
+            const pwd =
+                prompt(
+                    "請輸入管理者密碼以清空全部離場費："
+                );
+
+
+            if (pwd === null) {
+                return;
+            }
+
+
+            if (pwd !== "0721") {
+
+                alert(
+                    "密碼錯誤，無法清空離場費！"
+                );
+
+                return;
+            }
+
+
+            const confirmDelete =
+                confirm(
+`確定要清空全部離場費紀錄嗎？
+
+所有人的離場費累計與離場費歷史紀錄都會被刪除，而且無法復原！
+
+牌局、積分、一般捐款、寄生與洗碗資料不會受到影響。`
+                );
+
+
+            if (!confirmDelete) {
+                return;
+            }
+
+
+            try {
+
+                const snapshot =
+                    await getDocs(
+                        collection(
+                            db,
+                            "mahjong_exit_fees_v1"
+                        )
+                    );
+
+
+                await Promise.all(
+                    snapshot.docs.map(
+                        document =>
+                            deleteDoc(
+                                doc(
+                                    db,
+                                    "mahjong_exit_fees_v1",
+                                    document.id
+                                )
+                            )
+                    )
+                );
+
+
+                alert(
+                    "全部離場費已清空！"
+                );
+
+            } catch (e) {
+
+                console.error(
+                    "清空離場費錯誤：",
+                    e
+                );
+
+                alert(
+                    "清空離場費失敗，請檢查網路連線！"
+                );
+            }
+        };
+
+
+        /* ===============================
+           Firebase 牌局監聽
         =============================== */
 
         let latestRecords = [];
@@ -975,6 +1477,198 @@
 
 
         /* ===============================
+           Firebase 離場費監聽
+        =============================== */
+
+        let latestExitFeeRecords = [];
+
+
+        const qExitFees =
+            query(
+                collection(
+                    db,
+                    "mahjong_exit_fees_v1"
+                ),
+                orderBy(
+                    "timestamp",
+                    "asc"
+                )
+            );
+
+
+        onSnapshot(
+            qExitFees,
+            snapshot => {
+
+                latestExitFeeRecords = [];
+
+
+                snapshot.forEach(
+                    docSnap => {
+
+                        latestExitFeeRecords.push({
+                            id:
+                                docSnap.id,
+
+                            ...docSnap.data()
+                        });
+                    }
+                );
+
+
+                renderExitFees(
+                    latestExitFeeRecords
+                );
+            }
+        );
+
+
+        /* ===============================
+           離場費統計
+        =============================== */
+
+        function renderExitFees(records) {
+
+            const summaryEl =
+                document.getElementById(
+                    "exitFeeSummaryContainer"
+                );
+
+            const historyEl =
+                document.getElementById(
+                    "exitFeeHistoryContainer"
+                );
+
+
+            const totals = {};
+
+
+            allPlayers.forEach(
+                name => {
+
+                    totals[name] = 0;
+                }
+            );
+
+
+            records.forEach(
+                r => {
+
+                    if (
+                        totals[r.player] !==
+                        undefined
+                    ) {
+
+                        totals[r.player] +=
+                            Number(
+                                r.amount || 0
+                            );
+                    }
+                }
+            );
+
+
+            let summaryHTML =
+                '<ul class="rank-list">';
+
+
+            allPlayers.forEach(
+                name => {
+
+                    summaryHTML += `
+                        <li class="rank-item">
+
+                            <span>
+                                💰 ${name}
+                            </span>
+
+                            <span
+                                style="
+                                    color:#d35400;
+                                "
+                            >
+                                $${totals[name]}
+                            </span>
+
+                        </li>
+                    `;
+                }
+            );
+
+
+            summaryHTML +=
+                "</ul>";
+
+
+            summaryEl.innerHTML =
+                summaryHTML;
+
+
+            if (
+                records.length === 0
+            ) {
+
+                historyEl.innerHTML = `
+                    <p
+                        style="
+                            color:#7f8c8d;
+                            text-align:center;
+                            padding:10px;
+                        "
+                    >
+                        尚無離場費紀錄
+                    </p>
+                `;
+
+                return;
+            }
+
+
+            let historyHTML = "";
+
+
+            for (
+                let i =
+                    records.length - 1;
+                i >= 0;
+                i--
+            ) {
+
+                const r =
+                    records[i];
+
+
+                historyHTML += `
+                    <div class="exit-fee-history-item">
+
+                        <div>
+
+                            <span class="exit-fee-player">
+                                ${r.player}
+                            </span>
+
+                            <span class="exit-fee-amount">
+                                $${r.amount || 50}
+                            </span>
+
+                        </div>
+
+                        <div class="exit-fee-time">
+                            ${r.date || ""}
+                            ${r.time || ""}
+                        </div>
+
+                    </div>
+                `;
+            }
+
+
+            historyEl.innerHTML =
+                historyHTML;
+        }
+
+
+        /* ===============================
            畫面統計
         =============================== */
 
@@ -1012,119 +1706,171 @@
             const washObj = {};
 
 
-            allPlayers.forEach(p => {
+            allPlayers.forEach(
+                p => {
 
-                summaryObj[p] = 0;
-                countObj[p] = 0;
-                donationObj[p] = 0;
-                washObj[p] = 0;
-            });
-
-
-            /* ===============================
-               計算所有資料
-            =============================== */
-
-            records.forEach(r => {
-
-                const details =
-                    r.details;
+                    summaryObj[p] = 0;
+                    countObj[p] = 0;
+                    donationObj[p] = 0;
+                    washObj[p] = 0;
+                }
+            );
 
 
-                const sortedThisGame =
-                    Object.keys(
-                        details
-                    ).sort(
-                        (a, b) =>
-                            details[b]
-                            -
-                            details[a]
-                    );
+            records.forEach(
+                r => {
+
+                    const details =
+                        r.details;
 
 
-                const p3 =
-                    sortedThisGame[2];
+                    const sortedThisGame =
+                        Object.keys(
+                            details
+                        ).sort(
+                            (a, b) =>
+                                details[b] -
+                                details[a]
+                        );
 
-                const p4 =
-                    sortedThisGame[3];
+
+                    const p3 =
+                        sortedThisGame[2];
+
+                    const p4 =
+                        sortedThisGame[3];
 
 
-                /* 第三名 */
+                    /* 第三名 */
 
-                if (p3) {
+                    if (p3) {
+
+                        if (
+                            r.donation3Type ===
+                            "wash"
+                        ) {
+
+                            washObj[p3] += 1;
+
+                        } else {
+
+                            donationObj[p3] +=
+                                Number(
+                                    r.donation3 || 0
+                                );
+                        }
+                    }
+
+
+                    /* 第四名 */
+
+                    if (p4) {
+
+                        if (
+                            r.donation4Type ===
+                            "wash"
+                        ) {
+
+                            washObj[p4] += 1;
+
+                        } else {
+
+                            donationObj[p4] +=
+                                Number(
+                                    r.donation4 || 0
+                                );
+                        }
+                    }
+
+
+                    /* 寄生第三名 */
 
                     if (
-                        r.donation3Type === "wash"
+                        r.parasite3Name &&
+                        donationObj[
+                            r.parasite3Name
+                        ] !== undefined
                     ) {
 
-                        washObj[p3] += 1;
+                        if (
+                            r.parasite3Type ===
+                            "wash"
+                        ) {
 
-                    } else {
+                            washObj[
+                                r.parasite3Name
+                            ] += 1;
 
-                        donationObj[p3] +=
-                            Number(
-                                r.donation3 || 0
-                            );
+                        } else {
+
+                            donationObj[
+                                r.parasite3Name
+                            ] +=
+                                Number(
+                                    r.parasite3Donation ||
+                                    0
+                                );
+                        }
                     }
-                }
 
 
-                /* 第四名 */
-
-                if (p4) {
+                    /* 寄生第四名 */
 
                     if (
-                        r.donation4Type === "wash"
+                        r.parasite4Name &&
+                        donationObj[
+                            r.parasite4Name
+                        ] !== undefined
                     ) {
 
-                        washObj[p4] += 1;
+                        if (
+                            r.parasite4Type ===
+                            "wash"
+                        ) {
 
-                    } else {
+                            washObj[
+                                r.parasite4Name
+                            ] += 1;
 
-                        donationObj[p4] +=
-                            Number(
-                                r.donation4 || 0
-                            );
+                        } else {
+
+                            donationObj[
+                                r.parasite4Name
+                            ] +=
+                                Number(
+                                    r.parasite4Donation ||
+                                    0
+                                );
+                        }
                     }
-                }
 
 
-                /* 積分與場次 */
+                    /* 積分與場次 */
 
-                for (
-                    let name
-                    in details
-                ) {
-
-                    if (
-                        summaryObj[name]
-                        !== undefined
+                    for (
+                        let name
+                        in details
                     ) {
 
-                        summaryObj[name] +=
-                            details[name];
+                        if (
+                            summaryObj[name] !==
+                            undefined
+                        ) {
 
-                        countObj[name] +=
-                            1;
+                            summaryObj[name] +=
+                                details[name];
+
+                            countObj[name] +=
+                                1;
+                        }
                     }
                 }
-            });
+            );
 
 
             /* ===============================
                總積分排行榜
             =============================== */
-
-            const sortedPlayers =
-                Object.keys(
-                    summaryObj
-                ).sort(
-                    (a, b) =>
-                        summaryObj[b]
-                        -
-                        summaryObj[a]
-                );
-
 
             const medals = [
                 "👑",
@@ -1138,6 +1884,16 @@
             ];
 
 
+            const sortedPlayers =
+                Object.keys(
+                    summaryObj
+                ).sort(
+                    (a, b) =>
+                        summaryObj[b] -
+                        summaryObj[a]
+                );
+
+
             let rankHTML =
                 '<ul class="rank-list">';
 
@@ -1148,7 +1904,6 @@
                     const total =
                         summaryObj[name];
 
-
                     const color =
                         total > 0
                             ? "color:#27ae60;"
@@ -1156,12 +1911,10 @@
                                 ? "color:#e74c3c;"
                                 : "color:#7f8c8d;";
 
-
                     const sign =
                         total > 0
                             ? "+"
                             : "";
-
 
                     const rankClass =
                         index === 0 &&
@@ -1189,7 +1942,9 @@
             );
 
 
-            rankHTML += "</ul>";
+            rankHTML +=
+                "</ul>";
+
 
             rankEl.innerHTML =
                 rankHTML;
@@ -1211,13 +1966,11 @@
                                   countObj[a]
                                 : 0;
 
-
                         const avgB =
                             countObj[b] > 0
                                 ? summaryObj[b] /
                                   countObj[b]
                                 : 0;
-
 
                         return avgB - avgA;
                     }
@@ -1234,19 +1987,16 @@
                     const count =
                         countObj[name];
 
-
                     const avg =
                         count > 0
                             ? (
                                 summaryObj[name] /
                                 count
-                              ).toFixed(1)
+                            ).toFixed(1)
                             : "0.0";
-
 
                     const numAvg =
                         parseFloat(avg);
-
 
                     const color =
                         numAvg > 0
@@ -1255,12 +2005,10 @@
                                 ? "color:#e74c3c;"
                                 : "color:#7f8c8d;";
 
-
                     const sign =
                         numAvg > 0
                             ? "+"
                             : "";
-
 
                     const rankClass =
                         index === 0 &&
@@ -1299,7 +2047,9 @@
             );
 
 
-            avgRankHTML += "</ul>";
+            avgRankHTML +=
+                "</ul>";
+
 
             avgRankEl.innerHTML =
                 avgRankHTML;
@@ -1309,7 +2059,9 @@
                歷史紀錄
             =============================== */
 
-            if (records.length === 0) {
+            if (
+                records.length === 0
+            ) {
 
                 listEl.innerHTML = `
                     <p
@@ -1327,24 +2079,26 @@
                 const groupedByDate = {};
 
 
-                records.forEach(r => {
+                records.forEach(
+                    r => {
 
-                    const d =
-                        r.date ||
-                        "未分類日期";
+                        const d =
+                            r.date ||
+                            "未分類日期";
 
+                        if (
+                            !groupedByDate[d]
+                        ) {
 
-                    if (
-                        !groupedByDate[d]
-                    ) {
+                            groupedByDate[d] =
+                                [];
+                        }
 
-                        groupedByDate[d] =
-                            [];
+                        groupedByDate[d].push(
+                            r
+                        );
                     }
-
-
-                    groupedByDate[d].push(r);
-                });
+                );
 
 
                 const sortedDates =
@@ -1352,8 +2106,7 @@
                         groupedByDate
                     ).sort(
                         (a, b) =>
-                            new Date(b)
-                            -
+                            new Date(b) -
                             new Date(a)
                     );
 
@@ -1391,14 +2144,8 @@
                             const r =
                                 dayRecords[i];
 
-
-                            const gameIndex =
-                                i + 1;
-
-
                             const gameTitle =
-                                `第 ${gameIndex} 將`;
-
+                                `第 ${i + 1} 將`;
 
                             const detailStrs =
                                 [];
@@ -1409,20 +2156,18 @@
                                     r.details
                                 ).sort(
                                     (a, b) =>
-                                        r.details[b]
-                                        -
+                                        r.details[b] -
                                         r.details[a]
                                 );
 
 
                             const p3 =
-                                sortedThisGame[2]
-                                || "第三名";
-
+                                sortedThisGame[2] ||
+                                "第三名";
 
                             const p4 =
-                                sortedThisGame[3]
-                                || "第四名";
+                                sortedThisGame[3] ||
+                                "第四名";
 
 
                             for (
@@ -1433,12 +2178,10 @@
                                 const amt =
                                     r.details[name];
 
-
                                 const color =
                                     amt >= 0
                                         ? "color:#27ae60;"
                                         : "color:#e74c3c;";
-
 
                                 const sign =
                                     amt >= 0
@@ -1454,76 +2197,291 @@
                             }
 
 
-                            /* 第三名目前選項 */
+                            /* 第三名 */
 
-                            let selected3_50 = "";
-                            let selected3_100 = "";
-                            let selected3_wash = "";
-                            let selected3_none = "";
+                            let selected3None = "";
+                            let selected3Zero = "";
+                            let selected3Fifty = "";
+                            let selected3Hundred = "";
+                            let selected3Wash = "";
 
 
                             if (
-                                r.donation3Type === "wash"
+                                r.donation3Type ===
+                                "wash"
                             ) {
 
-                                selected3_wash =
+                                selected3Wash =
                                     "selected";
 
                             } else if (
-                                Number(r.donation3) === 50
+                                r.donation3Type ===
+                                "money" &&
+                                Number(
+                                    r.donation3
+                                ) === 0
                             ) {
 
-                                selected3_50 =
+                                selected3Zero =
                                     "selected";
 
                             } else if (
-                                Number(r.donation3) === 100
+                                Number(
+                                    r.donation3
+                                ) === 50
                             ) {
 
-                                selected3_100 =
+                                selected3Fifty =
+                                    "selected";
+
+                            } else if (
+                                Number(
+                                    r.donation3
+                                ) === 100
+                            ) {
+
+                                selected3Hundred =
                                     "selected";
 
                             } else {
 
-                                selected3_none =
+                                selected3None =
                                     "selected";
                             }
 
 
-                            /* 第四名目前選項 */
+                            /* 第四名 */
 
-                            let selected4_50 = "";
-                            let selected4_100 = "";
-                            let selected4_wash = "";
-                            let selected4_none = "";
+                            let selected4None = "";
+                            let selected4Zero = "";
+                            let selected4Fifty = "";
+                            let selected4Hundred = "";
+                            let selected4Wash = "";
 
 
                             if (
-                                r.donation4Type === "wash"
+                                r.donation4Type ===
+                                "wash"
                             ) {
 
-                                selected4_wash =
+                                selected4Wash =
                                     "selected";
 
                             } else if (
-                                Number(r.donation4) === 50
+                                r.donation4Type ===
+                                "money" &&
+                                Number(
+                                    r.donation4
+                                ) === 0
                             ) {
 
-                                selected4_50 =
+                                selected4Zero =
                                     "selected";
 
                             } else if (
-                                Number(r.donation4) === 100
+                                Number(
+                                    r.donation4
+                                ) === 50
                             ) {
 
-                                selected4_100 =
+                                selected4Fifty =
+                                    "selected";
+
+                            } else if (
+                                Number(
+                                    r.donation4
+                                ) === 100
+                            ) {
+
+                                selected4Hundred =
                                     "selected";
 
                             } else {
 
-                                selected4_none =
+                                selected4None =
                                     "selected";
                             }
+
+
+                            /* 可寄生玩家 */
+
+                            const gamePlayers =
+                                Object.keys(
+                                    r.details
+                                );
+
+                            const candidates =
+                                allPlayers.filter(
+                                    name =>
+                                        !gamePlayers.includes(
+                                            name
+                                        )
+                                );
+
+
+                            const savedP3Name =
+                                r.parasite3Name ||
+                                "";
+
+                            const savedP4Name =
+                                r.parasite4Name ||
+                                "";
+
+
+                            let parasite3Options =
+                                `<option value="">不寄生</option>`;
+
+                            let parasite4Options =
+                                `<option value="">不寄生</option>`;
+
+
+                            candidates.forEach(
+                                name => {
+
+                                    parasite3Options += `
+                                        <option
+                                            value="${name}"
+                                            ${
+                                                savedP3Name === name
+                                                    ? "selected"
+                                                    : ""
+                                            }
+                                        >
+                                            ${name}
+                                        </option>
+                                    `;
+
+                                    parasite4Options += `
+                                        <option
+                                            value="${name}"
+                                            ${
+                                                savedP4Name === name
+                                                    ? "selected"
+                                                    : ""
+                                            }
+                                        >
+                                            ${name}
+                                        </option>
+                                    `;
+                                }
+                            );
+
+
+                            /* 第三名寄生捐款 */
+
+                            let p3None = "";
+                            let p3Zero = "";
+                            let p3Fifty = "";
+                            let p3Hundred = "";
+                            let p3Wash = "";
+
+
+                            if (
+                                r.parasite3Type ===
+                                "wash"
+                            ) {
+
+                                p3Wash =
+                                    "selected";
+
+                            } else if (
+                                r.parasite3Type ===
+                                "money" &&
+                                Number(
+                                    r.parasite3Donation
+                                ) === 0
+                            ) {
+
+                                p3Zero =
+                                    "selected";
+
+                            } else if (
+                                Number(
+                                    r.parasite3Donation
+                                ) === 50
+                            ) {
+
+                                p3Fifty =
+                                    "selected";
+
+                            } else if (
+                                Number(
+                                    r.parasite3Donation
+                                ) === 100
+                            ) {
+
+                                p3Hundred =
+                                    "selected";
+
+                            } else {
+
+                                p3None =
+                                    "selected";
+                            }
+
+
+                            /* 第四名寄生捐款 */
+
+                            let p4None = "";
+                            let p4Zero = "";
+                            let p4Fifty = "";
+                            let p4Hundred = "";
+                            let p4Wash = "";
+
+
+                            if (
+                                r.parasite4Type ===
+                                "wash"
+                            ) {
+
+                                p4Wash =
+                                    "selected";
+
+                            } else if (
+                                r.parasite4Type ===
+                                "money" &&
+                                Number(
+                                    r.parasite4Donation
+                                ) === 0
+                            ) {
+
+                                p4Zero =
+                                    "selected";
+
+                            } else if (
+                                Number(
+                                    r.parasite4Donation
+                                ) === 50
+                            ) {
+
+                                p4Fifty =
+                                    "selected";
+
+                            } else if (
+                                Number(
+                                    r.parasite4Donation
+                                ) === 100
+                            ) {
+
+                                p4Hundred =
+                                    "selected";
+
+                            } else {
+
+                                p4None =
+                                    "selected";
+                            }
+
+
+                            const p3Display =
+                                savedP3Name !== ""
+                                    ? "flex"
+                                    : "none";
+
+                            const p4Display =
+                                savedP4Name !== ""
+                                    ? "flex"
+                                    : "none";
 
 
                             historyHTML += `
@@ -1563,7 +2521,6 @@
 
                                     <div class="game-donation-inputs">
 
-
                                         <div class="donation-person">
 
                                             💡
@@ -1581,28 +2538,35 @@
                                                 <option
                                                     value=""
                                                     disabled
-                                                    ${selected3_none}
+                                                    ${selected3None}
                                                 >
                                                     請選擇
                                                 </option>
 
                                                 <option
+                                                    value="0"
+                                                    ${selected3Zero}
+                                                >
+                                                    0
+                                                </option>
+
+                                                <option
                                                     value="50"
-                                                    ${selected3_50}
+                                                    ${selected3Fifty}
                                                 >
                                                     50
                                                 </option>
 
                                                 <option
                                                     value="100"
-                                                    ${selected3_100}
+                                                    ${selected3Hundred}
                                                 >
                                                     100
                                                 </option>
 
                                                 <option
                                                     value="wash"
-                                                    ${selected3_wash}
+                                                    ${selected3Wash}
                                                 >
                                                     洗碗
                                                 </option>
@@ -1629,28 +2593,35 @@
                                                 <option
                                                     value=""
                                                     disabled
-                                                    ${selected4_none}
+                                                    ${selected4None}
                                                 >
                                                     請選擇
                                                 </option>
 
                                                 <option
+                                                    value="0"
+                                                    ${selected4Zero}
+                                                >
+                                                    0
+                                                </option>
+
+                                                <option
                                                     value="50"
-                                                    ${selected4_50}
+                                                    ${selected4Fifty}
                                                 >
                                                     50
                                                 </option>
 
                                                 <option
                                                     value="100"
-                                                    ${selected4_100}
+                                                    ${selected4Hundred}
                                                 >
                                                     100
                                                 </option>
 
                                                 <option
                                                     value="wash"
-                                                    ${selected4_wash}
+                                                    ${selected4Wash}
                                                 >
                                                     洗碗
                                                 </option>
@@ -1660,22 +2631,176 @@
                                         </div>
 
 
-                                        <button
-                                            type="button"
-                                            class="small-confirm-btn"
-                                            onclick="saveDonation('${r.id}')"
-                                        >
-                                            確認
-                                        </button>
+                                        <div class="parasite-section">
+
+                                            <div class="parasite-title">
+                                                🪱 寄生
+                                            </div>
 
 
-                                        <button
-                                            type="button"
-                                            class="small-delete-btn"
-                                            onclick="deleteRecord('${r.id}')"
-                                        >
-                                            刪除此筆
-                                        </button>
+                                            <div class="parasite-row">
+
+                                                <strong>
+                                                    寄生 ${p3}（3名）：
+                                                </strong>
+
+                                                <select
+                                                    id="parasite3_name_${r.id}"
+                                                    onchange="toggleParasiteDonation('${r.id}', 3)"
+                                                >
+                                                    ${parasite3Options}
+                                                </select>
+
+
+                                                <div
+                                                    class="parasite-donation-wrap"
+                                                    id="parasite3_donation_wrap_${r.id}"
+                                                    style="display:${p3Display};"
+                                                >
+
+                                                    <span>
+                                                        寄生人捐款：
+                                                    </span>
+
+                                                    <select
+                                                        id="parasite3_amt_${r.id}"
+                                                    >
+
+                                                        <option
+                                                            value=""
+                                                            disabled
+                                                            ${p3None}
+                                                        >
+                                                            請選擇
+                                                        </option>
+
+                                                        <option
+                                                            value="0"
+                                                            ${p3Zero}
+                                                        >
+                                                            0
+                                                        </option>
+
+                                                        <option
+                                                            value="50"
+                                                            ${p3Fifty}
+                                                        >
+                                                            50
+                                                        </option>
+
+                                                        <option
+                                                            value="100"
+                                                            ${p3Hundred}
+                                                        >
+                                                            100
+                                                        </option>
+
+                                                        <option
+                                                            value="wash"
+                                                            ${p3Wash}
+                                                        >
+                                                            洗碗
+                                                        </option>
+
+                                                    </select>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            <div class="parasite-row">
+
+                                                <strong>
+                                                    寄生 ${p4}（4名）：
+                                                </strong>
+
+                                                <select
+                                                    id="parasite4_name_${r.id}"
+                                                    onchange="toggleParasiteDonation('${r.id}', 4)"
+                                                >
+                                                    ${parasite4Options}
+                                                </select>
+
+
+                                                <div
+                                                    class="parasite-donation-wrap"
+                                                    id="parasite4_donation_wrap_${r.id}"
+                                                    style="display:${p4Display};"
+                                                >
+
+                                                    <span>
+                                                        寄生人捐款：
+                                                    </span>
+
+                                                    <select
+                                                        id="parasite4_amt_${r.id}"
+                                                    >
+
+                                                        <option
+                                                            value=""
+                                                            disabled
+                                                            ${p4None}
+                                                        >
+                                                            請選擇
+                                                        </option>
+
+                                                        <option
+                                                            value="0"
+                                                            ${p4Zero}
+                                                        >
+                                                            0
+                                                        </option>
+
+                                                        <option
+                                                            value="50"
+                                                            ${p4Fifty}
+                                                        >
+                                                            50
+                                                        </option>
+
+                                                        <option
+                                                            value="100"
+                                                            ${p4Hundred}
+                                                        >
+                                                            100
+                                                        </option>
+
+                                                        <option
+                                                            value="wash"
+                                                            ${p4Wash}
+                                                        >
+                                                            洗碗
+                                                        </option>
+
+                                                    </select>
+
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+
+                                        <div class="record-action-row">
+
+                                            <button
+                                                type="button"
+                                                class="small-confirm-btn"
+                                                onclick="saveDonation('${r.id}')"
+                                            >
+                                                確認
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                class="small-delete-btn"
+                                                onclick="deleteRecord('${r.id}')"
+                                            >
+                                                刪除此筆
+                                            </button>
+
+                                        </div>
 
                                     </div>
 
@@ -1701,27 +2826,22 @@
                捐款總計
             =============================== */
 
-            let donationHTML =
-                '<ul class="rank-list">';
-
-
             const sortedDonationPlayers =
                 Object.keys(
                     donationObj
                 ).sort(
                     (a, b) =>
-                        donationObj[b]
-                        -
+                        donationObj[b] -
                         donationObj[a]
                 );
 
 
+            let donationHTML =
+                '<ul class="rank-list">';
+
+
             sortedDonationPlayers.forEach(
                 name => {
-
-                    const totalDonation =
-                        donationObj[name];
-
 
                     donationHTML += `
                         <li class="rank-item">
@@ -1735,7 +2855,7 @@
                                     color:#d35400;
                                 "
                             >
-                                $${totalDonation}
+                                $${donationObj[name]}
                             </span>
 
                         </li>
@@ -1744,7 +2864,9 @@
             );
 
 
-            donationHTML += "</ul>";
+            donationHTML +=
+                "</ul>";
+
 
             donationSummaryEl.innerHTML =
                 donationHTML;
@@ -1790,7 +2912,6 @@
                     const washCount =
                         washObj[name];
 
-
                     const rankClass =
                         index === 0 &&
                         washCount > 0
@@ -1821,7 +2942,9 @@
             );
 
 
-            washHTML += "</ul>";
+            washHTML +=
+                "</ul>";
+
 
             washRankEl.innerHTML =
                 washHTML;
@@ -1829,6 +2952,7 @@
 
     </script>
 </head>
+
 
 <body>
 
@@ -1844,7 +2968,6 @@
         <h3>
             1. 選擇打牌日期與 4 位玩家
         </h3>
-
 
         <div class="form-group">
 
@@ -1912,7 +3035,7 @@
     </div>
 
 
-    <!-- 總積分排行榜 -->
+    <!-- 總積分 -->
 
     <div class="card">
 
@@ -1926,7 +3049,7 @@
     </div>
 
 
-    <!-- 平均分排行榜 -->
+    <!-- 平均分 -->
 
     <div class="card">
 
@@ -1940,7 +3063,7 @@
     </div>
 
 
-    <!-- 歷史紀錄 -->
+    <!-- 歷史 -->
 
     <div class="card">
 
@@ -1967,7 +3090,7 @@
     </div>
 
 
-    <!-- 捐款總計 -->
+    <!-- 捐款 -->
 
     <div class="card">
 
@@ -1981,7 +3104,7 @@
     </div>
 
 
-    <!-- 洗碗排行榜 -->
+    <!-- 洗碗 -->
 
     <div class="card">
 
@@ -1991,6 +3114,85 @@
 
         <div id="washRankContainer">
         </div>
+
+    </div>
+
+
+    <!-- 離場費 -->
+
+    <div class="card">
+
+        <h3>
+            💸 離場費捐款
+        </h3>
+
+
+        <div class="exit-fee-controls">
+
+            <select
+                id="exitFeePlayer"
+            >
+                <option value="">
+                    請選擇玩家
+                </option>
+            </select>
+
+
+            <button
+                type="button"
+                class="small-confirm-btn"
+                onclick="saveExitFee()"
+            >
+                確認
+            </button>
+
+        </div>
+
+
+        <div class="exit-fee-note">
+            每次確認會替選擇的玩家新增一筆 50 元離場費。
+        </div>
+
+
+        <h4>
+            💰 離場費累計
+        </h4>
+
+        <div
+            id="exitFeeSummaryContainer"
+        >
+        </div>
+
+
+        <h4>
+            📋 離場費紀錄
+        </h4>
+
+        <div
+            class="exit-fee-history"
+            id="exitFeeHistoryContainer"
+        >
+
+            <p
+                style="
+                    color:#7f8c8d;
+                    text-align:center;
+                    padding:10px;
+                "
+            >
+                尚無離場費紀錄
+            </p>
+
+        </div>
+
+
+        <button
+            type="button"
+            class="exit-clear-btn"
+            onclick="clearAllExitFees()"
+        >
+            清空全部離場費（需管理者密碼）
+        </button>
 
     </div>
 
