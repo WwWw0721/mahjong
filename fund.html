@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>麻將公基金收支</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f4f7f6;color:#2c3e50;font-family:Arial,"Microsoft JhengHei",sans-serif}
+main{max-width:850px;margin:auto;padding:20px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
+h1{font-size:25px;margin:0}
+h2{font-size:19px;margin:0 0 16px}
+a{color:#2477b5;text-decoration:none}
+.card{background:white;border-radius:12px;padding:20px;margin-bottom:18px;box-shadow:0 2px 8px #0001}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.stat{background:white;border:1px solid #e4e9ed;border-radius:12px;padding:18px 10px;text-align:center}
+.stat span{display:block;font-size:13px;color:#718096;margin-bottom:10px}
+.stat strong{font-size:25px;overflow-wrap:anywhere}
+.positive{color:#229765}
+.negative{color:#d94d4d}
+.note{color:#718096;font-size:13px;line-height:1.7}
+.error{color:#bf3535}
+label{display:block;font-weight:bold;margin:14px 0 8px}
+input,button{font:inherit;border:1px solid #ccd6dd;border-radius:7px;padding:12px;width:100%}
+button{background:#2c3e50;color:white;border:0;cursor:pointer}
+button:disabled{opacity:.5;cursor:wait}
+#saveButton{margin-top:16px}
+#cancelEdit{margin-top:8px;background:#e9eef3;color:#2c3e50}
+.table-wrap{max-height:420px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:12px 10px;border-bottom:1px solid #edf1f4;text-align:left;vertical-align:top}
+th{background:#f8fafc;position:sticky;top:0}
+.date,.money{white-space:nowrap}
+.purpose{min-width:120px;overflow-wrap:anywhere}
+.edit{padding:7px 10px;width:auto;background:#2980b9;font-size:13px;white-space:nowrap;margin-bottom:6px}
+.delete{padding:7px 10px;width:auto;background:#e74c3c;font-size:13px;white-space:nowrap}
+.empty{text-align:center;padding:18px;color:#718096}
+fieldset{border:0;padding:0;margin:0;min-width:0}
+#formStatus{white-space:pre-wrap}
+details summary{cursor:pointer;color:#2477b5;padding:10px 0}
+#notice{line-height:1.7}
+@media(max-width:550px){
+  main{padding:14px}
+  .card{padding:16px}
+  h1{font-size:22px}
+  .stat strong{font-size:20px}
+  .grid{gap:7px}
+  th,td{padding:10px 7px}
+}
+</style>
+</head>
+
+<body>
+<main>
+  <header>
+    <h1>💰 公基金收支</h1>
+    <a href="./index.html">← 回首頁</a>
+  </header>
+
+  <p id="notice" class="note" role="status">正在讀取雲端資料…</p>
+
+  <div class="grid">
+    <div class="stat">
+      <span>累積收入</span>
+      <strong id="incomeTotal" class="positive">—</strong>
+    </div>
+
+    <div class="stat">
+      <span>累積支出</span>
+      <strong id="expenseTotal" class="negative">—</strong>
+    </div>
+
+    <div class="stat">
+      <span>剩餘金額</span>
+      <strong id="balance">—</strong>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="formTitle">➖ 新增支出</h2>
+
+    <form id="expenseForm">
+      <fieldset id="expenseFields">
+        <label for="expenseDate">支出日期</label>
+        <input id="expenseDate" type="date" required>
+
+        <label for="expensePurpose">用途</label>
+        <input
+          id="expensePurpose"
+          type="text"
+          maxlength="100"
+          placeholder="例如：買飲料、買衛生紙"
+          required
+        >
+
+        <label for="expenseAmount">金額（元）</label>
+        <input
+          id="expenseAmount"
+          type="number"
+          min="0.01"
+          max="1000000000"
+          step="0.01"
+          inputmode="decimal"
+          placeholder="例如：200"
+          required
+        >
+
+        <button id="saveButton" type="submit">儲存支出</button>
+        <button id="cancelEdit" type="button" hidden>取消編輯</button>
+      </fieldset>
+    </form>
+
+    <p id="formStatus" class="note" role="status"></p>
+
+    <p class="note">
+      儲存期間按鈕會鎖住，避免重複記錄。
+      點擊下方「編輯」可修改日期、用途與金額，密碼沿用 0721。
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>📋 支出紀錄</h2>
+    <div class="table-wrap" id="expenseHistory">
+      <p class="empty">載入中…</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🎁 捐款收入</h2>
+
+    <p class="note">
+      自動加總牌局中的本人捐款與寄生捐款。
+      洗碗不算收入；修改或刪除牌局、修改捐款後，收入也會更新。
+      此處顯示的是已記錄的捐款，未另行核對是否收款。
+    </p>
+
+    <details>
+      <summary>查看每將捐款收入明細</summary>
+
+      <div class="table-wrap" id="incomeHistory">
+        <p class="empty">載入中…</p>
+      </div>
+    </details>
+  </div>
+</main>
+
+<script type="module">
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+
+import {
+  getFirestore,
+  collection,
+  doc,
+  setDoc,
+  deleteDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  runTransaction
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDS9-ray-dSj_Y7IvrRjofEIWHjqFgu0Zg",
+  authDomain: "mahjong-a2377.firebaseapp.com",
+  projectId: "mahjong-a2377",
+  storageBucket: "mahjong-a2377.firebasestorage.app",
+  messagingSenderId: "892513192079",
+  appId: "1:892513192079:web:ce033c110932cfbfc508fa",
+  measurementId: "G-707G2B2DH3"
+};
+
+const db = getFirestore(initializeApp(firebaseConfig));
+
+const RECORDS = "mahjong_records_v7";
+const EXPENSES = "mahjong_expenses_v1";
+
+const players = [
+  "大凸", "阿翔", "大姐", "鱷魚",
+  "抖內姐", "黑人", "藍莓", "阿雯"
+];
+
+const $ = id => document.getElementById(id);
+
+const esc = value => String(value ?? "").replace(
+  /[&<>"']/g,
+  c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c])
+);
+
+const number = value =>
+  Number.isFinite(Number(value)) ? Number(value) : 0;
+
+const money = value =>
+  "$" + number(value).toLocaleString(
+    "zh-TW",
+    { maximumFractionDigits: 2 }
+  );
+
+const cents = value => Math.round(number(value) * 100);
+
+const localDate = () => {
+  const date = new Date();
+
+  return (
+    `${date.getFullYear()}-` +
+    `${String(date.getMonth() + 1).padStart(2, "0")}-` +
+    `${String(date.getDate()).padStart(2, "0")}`
+  );
+};
+
+let records = [];
+let expenses = [];
+let incomeReady = false;
+let expenseReady = false;
+let incomeError = "";
+let expenseError = "";
+
+let saving = false;
+let retryWrite = null;
+let editing = null;
+
+const deleting = new Set();
+
+function errorText(error) {
+  if (
+    error.code === "edit-conflict" ||
+    error.code === "edit-missing"
+  ) {
+    return error.message;
+  }
+
+  if (error.code === "permission-denied") {
+    return "資料庫權限不足，請檢查 Firestore 規則。";
+  }
+
+  if (error.code === "unavailable") {
+    return "網路或服務暫時無法使用，請稍後重試。";
+  }
+
+  return "操作失敗，請檢查網路與資料庫設定。";
+}
+
+function donationEntries(record) {
+  const details = record.details || {};
+
+  const order = Object.keys(details).sort(
+    (a, b) => number(details[b]) - number(details[a])
+  );
+
+  const entries = [];
+
+  for (const k of [3, 4]) {
+    const player = order[k - 1];
+    const guest = record[`parasite${k}Name`];
+
+    if (
+      players.includes(player) &&
+      record[`donation${k}Type`] !== "wash"
+    ) {
+      const amount = number(record[`donation${k}`]);
+
+      if (amount) {
+        entries.push({ name: player, amount, kind: "本人" });
+      }
+    }
+
+    if (
+      players.includes(guest) &&
+      record[`parasite${k}Type`] !== "wash"
+    ) {
+      const amount = number(record[`parasite${k}Donation`]);
+
+      if (amount) {
+        entries.push({ name: guest, amount, kind: "寄生" });
+      }
+    }
+  }
+
+  return entries;
+}
+
+function render() {
+  const income = records.reduce(
+    (sum, record) => sum + donationEntries(record).reduce(
+      (subtotal, entry) => subtotal + number(entry.amount),
+      0
+    ),
+    0
+  );
+
+  const outgoing = expenses.reduce(
+    (sum, record) => sum + cents(record.amount),
+    0
+  ) / 100;
+
+  const incomeOK = incomeReady && !incomeError;
+  const expenseOK = expenseReady && !expenseError;
+
+  $("incomeTotal").textContent = incomeOK ? money(income) : "—";
+  $("expenseTotal").textContent = expenseOK ? money(outgoing) : "—";
+
+  $("balance").textContent =
+    incomeOK && expenseOK ? money(income - outgoing) : "—";
+
+  $("balance").className =
+    income - outgoing < 0 ? "negative" : "positive";
+
+  const messages = [];
+
+  if (incomeError) {
+    messages.push("收入讀取失敗：" + incomeError);
+  } else if (!incomeReady) {
+    messages.push("收入讀取中…");
+  }
+
+  if (expenseError) {
+    messages.push("支出讀取失敗：" + expenseError);
+  } else if (!expenseReady) {
+    messages.push("支出讀取中…");
+  }
+
+  if (!messages.length) {
+    messages.push("雲端資料已載入，收支更新會自動同步。");
+  }
+
+  $("notice").textContent = messages.join(" ");
+  $("notice").className =
+    incomeError || expenseError ? "error" : "note";
+
+  if (expenseOK) {
+    $("expenseHistory").innerHTML = expenses.length
+      ? `
+        <table>
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>用途</th>
+              <th>金額</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${[...expenses].reverse().map(record => `
+              <tr>
+                <td class="date">${esc(record.date)}</td>
+
+                <td class="purpose">
+                  ${esc(record.purpose)}
+                  ${record.pending
+                    ? '<br><small class="note">同步中…</small>'
+                    : ""}
+                </td>
+
+                <td class="money negative">
+                  ${money(record.amount)}
+                </td>
+
+                <td>
+                  <button
+                    type="button"
+                    class="edit"
+                    data-action="edit"
+                    data-id="${esc(record.id)}"
+                    ${saving || record.pending || deleting.has(record.id)
+                      ? "disabled"
+                      : ""}
+                  >
+                    編輯
+                  </button>
+
+                  <button
+                    type="button"
+                    class="delete"
+                    data-action="delete"
+                    data-id="${esc(record.id)}"
+                    ${saving || record.pending || deleting.has(record.id)
+                      ? "disabled"
+                      : ""}
+                  >
+                    ${deleting.has(record.id) ? "刪除中…" : "刪除"}
+                  </button>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `
+      : '<p class="empty">尚無支出紀錄。</p>';
+  } else {
+    $("expenseHistory").textContent = expenseError
+      ? "無法讀取支出紀錄。"
+      : "載入中…";
+  }
+
+  if (incomeOK) {
+    const rows = records.map(record => ({
+      record,
+      entries: donationEntries(record)
+    })).filter(item => item.entries.length);
+
+    $("incomeHistory").innerHTML = rows.length
+      ? `
+        <table>
+          <thead>
+            <tr>
+              <th>日期／時間</th>
+              <th>捐款人</th>
+              <th>合計</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${rows.reverse().map(({ record, entries }) => `
+              <tr>
+                <td class="date">
+                  ${esc(record.date)}<br>
+                  <span class="note">${esc(record.time)}</span>
+                </td>
+
+                <td>
+                  ${entries.map(entry =>
+                    `${esc(entry.name)}（${entry.kind}）${money(entry.amount)}`
+                  ).join("<br>")}
+                </td>
+
+                <td class="money positive">
+                  ${money(entries.reduce(
+                    (sum, entry) => sum + entry.amount,
+                    0
+                  ))}
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `
+      : '<p class="empty">尚無捐款收入。</p>';
+  } else {
+    $("incomeHistory").textContent = incomeError
+      ? "無法讀取捐款收入。"
+      : "載入中…";
+  }
+}
+
+function readExpense() {
+  const date = $("expenseDate").value;
+  const purpose = $("expensePurpose").value.trim();
+  const raw = $("expenseAmount").value.trim();
+  const amount = Number(raw);
+
+  if (!date || !purpose) {
+    throw Error("請填寫日期與用途。");
+  }
+
+  if (
+    !/^\d+(\.\d{1,2})?$/.test(raw) ||
+    !Number.isFinite(amount) ||
+    amount <= 0 ||
+    amount > 1000000000
+  ) {
+    throw Error("請輸入大於 0 的金額，最多兩位小數。");
+  }
+
+  return {
+    date,
+    purpose,
+    amount: cents(amount) / 100
+  };
+}
+
+function expenseSignature(record) {
+  return JSON.stringify([
+    record.date,
+    record.purpose,
+    number(record.amount),
+    record.timestamp,
+    record.updatedAt ?? null
+  ]);
+}
+
+function resetEditor() {
+  editing = null;
+
+  $("formTitle").textContent = "➖ 新增支出";
+  $("saveButton").textContent = "儲存支出";
+  $("cancelEdit").hidden = true;
+
+  $("expenseDate").value = localDate();
+  $("expensePurpose").value = "";
+  $("expenseAmount").value = "";
+}
+
+$("cancelEdit").addEventListener("click", () => {
+  if (saving) return;
+
+  resetEditor();
+
+  $("formStatus").textContent = "已取消編輯。";
+  $("formStatus").className = "note";
+});
+
+$("expenseForm").addEventListener("submit", async event => {
+  event.preventDefault();
+
+  if (saving) return;
+
+  let data;
+
+  try {
+    data = readExpense();
+  } catch (error) {
+    $("formStatus").textContent = error.message;
+    $("formStatus").className = "error";
+    return;
+  }
+
+  const edit = editing;
+
+  saving = true;
+  $("expenseFields").disabled = true;
+  $("saveButton").textContent = "儲存中…";
+  $("formStatus").className = "note";
+
+  $("formStatus").textContent = edit
+    ? "正在儲存修改…"
+    : "正在儲存支出，請稍候…";
+
+  render();
+
+  try {
+    if (edit) {
+      await runTransaction(db, async transaction => {
+        const reference = doc(db, EXPENSES, edit.id);
+        const snapshot = await transaction.get(reference);
+
+        if (!snapshot.exists()) {
+          throw Object.assign(
+            new Error("這筆支出已被刪除，請取消編輯。"),
+            { code: "edit-missing" }
+          );
+        }
+
+        if (expenseSignature(snapshot.data()) !== edit.signature) {
+          throw Object.assign(
+            new Error("其他裝置已修改這筆支出，請取消並重新點選編輯。"),
+            { code: "edit-conflict" }
+          );
+        }
+
+        transaction.update(reference, {
+          ...data,
+          updatedAt: Date.now()
+        });
+      });
+
+      resetEditor();
+    } else {
+      const signature = JSON.stringify(data);
+
+      if (!retryWrite || retryWrite.signature !== signature) {
+        retryWrite = {
+          signature,
+          ref: doc(collection(db, EXPENSES)),
+          data: {
+            ...data,
+            timestamp: Date.now()
+          }
+        };
+      }
+
+      await setDoc(retryWrite.ref, retryWrite.data);
+
+      retryWrite = null;
+      $("expensePurpose").value = "";
+      $("expenseAmount").value = "";
+    }
+
+    $("formStatus").className = "positive";
+    $("formStatus").textContent = edit
+      ? "支出已修改，剩餘金額會自動更新！"
+      : "支出已儲存！";
+  } catch (error) {
+    console.error(error);
+
+    $("formStatus").className = "error";
+    $("formStatus").textContent =
+      errorText(error) + " 輸入內容已保留。";
+  } finally {
+    saving = false;
+    $("expenseFields").disabled = false;
+    $("saveButton").textContent = editing ? "儲存修改" : "儲存支出";
+    render();
+  }
+});
+
+$("expenseHistory").addEventListener("click", async event => {
+  const button = event.target.closest("button[data-id]");
+
+  if (!button || button.disabled || saving) return;
+
+  const id = button.dataset.id;
+  const record = expenses.find(record => record.id === id);
+
+  if (!record || record.pending || deleting.has(id)) return;
+
+  const action = button.dataset.action;
+
+  const password = prompt(
+    action === "edit"
+      ? "請輸入管理者密碼以編輯支出："
+      : "請輸入管理者密碼以刪除支出："
+  );
+
+  if (password === null) return;
+
+  if (password !== "0721") {
+    alert("密碼錯誤！");
+    return;
+  }
+
+  if (action === "edit") {
+    if (
+      editing &&
+      !confirm("切換編輯會捨棄目前尚未儲存的修改，確定繼續？")
+    ) {
+      return;
+    }
+
+    editing = {
+      id,
+      signature: expenseSignature(record)
+    };
+
+    $("formTitle").textContent = "✏️ 編輯支出";
+    $("expenseDate").value = record.date;
+    $("expensePurpose").value = record.purpose;
+    $("expenseAmount").value = String(record.amount);
+
+    $("saveButton").textContent = "儲存修改";
+    $("cancelEdit").hidden = false;
+
+    $("formStatus").className = "note";
+    $("formStatus").textContent =
+      "正在修改原紀錄，不會新增一筆支出。";
+
+    $("expenseForm").scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+
+    $("expensePurpose").focus({ preventScroll: true });
+    return;
+  }
+
+  if (!confirm(
+    `確定刪除「${record.purpose}」${money(record.amount)}？\n` +
+    "刪除後會重新計算剩餘金額。"
+  )) {
+    return;
+  }
+
+  deleting.add(id);
+  render();
+
+  try {
+    await deleteDoc(doc(db, EXPENSES, id));
+
+    if (editing?.id === id) {
+      resetEditor();
+      $("formStatus").textContent = "這筆支出已刪除。";
+    }
+  } catch (error) {
+    console.error(error);
+    alert(errorText(error));
+  } finally {
+    deleting.delete(id);
+    render();
+  }
+});
+
+$("expenseDate").value = localDate();
+
+onSnapshot(
+  query(collection(db, RECORDS), orderBy("timestamp", "asc")),
+  snapshot => {
+    records = snapshot.docs.map(document => ({
+      ...document.data(),
+      id: document.id
+    }));
+
+    incomeReady = true;
+    incomeError = "";
+    render();
+  },
+  error => {
+    console.error(error);
+    incomeError = errorText(error);
+    render();
+  }
+);
+
+onSnapshot(
+  query(collection(db, EXPENSES), orderBy("timestamp", "asc")),
+  { includeMetadataChanges: true },
+  snapshot => {
+    expenses = snapshot.docs.map(document => ({
+      ...document.data(),
+      id: document.id,
+      pending: document.metadata.hasPendingWrites
+    }));
+
+    expenseReady = true;
+    expenseError = "";
+    render();
+  },
+  error => {
+    console.error(error);
+    expenseError = errorText(error);
+    render();
+  }
+);
+
+render();
+</script>
+</body>
+</html>

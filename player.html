@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>麻將個人數據</title>
+
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f4f7f6;color:#2c3e50;font-family:Arial,"Microsoft JhengHei",sans-serif}
+main{max-width:850px;margin:auto;padding:20px}
+a{color:#2477b5}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:20px}
+header a{text-decoration:none}
+h1{font-size:25px;margin:0}
+h2{font-size:19px;margin:0 0 16px}
+.card{background:white;border-radius:12px;padding:20px;margin-bottom:18px;box-shadow:0 2px 8px #00000009}
+label{font-weight:bold}
+select{display:block;width:100%;padding:12px;margin-top:10px;font-size:17px;background:white;border:1px solid #ccd6dd;border-radius:8px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.stat{background:white;border-radius:12px;padding:17px 12px;text-align:center;border:1px solid #e4e9ed}
+.stat span{display:block;color:#718096;font-size:13px;margin-bottom:10px}
+.stat strong{font-size:24px;overflow-wrap:anywhere}
+.positive{color:#229765}
+.negative{color:#d94d4d}
+.muted,.note{color:#718096;font-size:13px;line-height:1.7}
+.note{margin:12px 0 0}
+.rows{display:grid;gap:0}
+.row{display:flex;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #edf1f4}
+.row:last-child{border:0}
+.row strong{text-align:right}
+.table-wrap{max-height:450px;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:14px;white-space:nowrap}
+th,td{padding:12px 10px;text-align:left;border-bottom:1px solid #edf1f4}
+th{background:#f8fafc;position:sticky;top:0}
+td.players{white-space:normal;min-width:170px}
+.empty{text-align:center;color:#718096;padding:20px}
+.error{color:#bf3535}
+.chart svg{width:100%;height:auto;display:block}
+.chart{min-height:90px}
+button{padding:10px;border:0;border-radius:6px;background:#e9f1fa;color:#2477b5;cursor:pointer;font-size:14px}
+#notice{margin:0 0 18px;line-height:1.6}
+#profileTitle{margin-bottom:15px}
+#content[hidden]{display:none}
+@media(max-width:550px){
+  main{padding:14px}
+  .card{padding:16px}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  h1{font-size:22px}
+  header{flex-wrap:wrap}
+  .stat strong{font-size:23px}
+}
+</style>
+</head>
+
+<body>
+<main>
+  <header>
+    <h1>🀄 個人數據</h1>
+    <a href="./index.html">← 回首頁</a>
+  </header>
+
+  <div class="card">
+    <label for="playerSelect">選擇玩家</label>
+    <select id="playerSelect"></select>
+
+    <p class="note">
+      切換玩家後，網址會跟著更新，可以直接複製網址分享。
+    </p>
+  </div>
+
+  <p id="notice" role="status">正在讀取雲端資料…</p>
+
+  <div id="content" hidden>
+    <h2 id="profileTitle"></h2>
+    <div class="grid" id="summary"></div>
+
+    <div class="card">
+      <h2>📈 累積積分</h2>
+      <div class="chart" id="chart"></div>
+
+      <p class="note">
+        依牌局記錄建立順序累加，起點為 0 分；
+        補登舊日期的牌局會排在後面。
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>🎯 表現統計</h2>
+      <div class="rows" id="performance"></div>
+
+      <p class="note">
+        正分率＝積分大於 0 的將數 ÷ 參與將數。
+        0 分不列入贏或輸。
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>🏆 各名次次數</h2>
+      <div class="grid" id="positions" style="margin:0"></div>
+    </div>
+
+    <div class="card">
+      <h2>💰 捐款與洗碗</h2>
+      <div class="rows" id="payments"></div>
+
+      <p class="note">
+        平均一將捐＝本人捐款與寄生捐款合計 ÷ 個人參與將數。
+        沒有參與牌局時顯示「—」；
+        寄生不增加參與將數或個人積分。
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>📜 個人牌局紀錄</h2>
+      <div class="table-wrap" id="history"></div>
+    </div>
+
+    <div class="card">
+      <h2>🪱 寄生紀錄</h2>
+      <div class="table-wrap" id="parasites"></div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+
+import {
+  getFirestore,
+  collection,
+  query,
+  orderBy,
+  onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDS9-ray-dSj_Y7IvrRjofEIWHjqFgu0Zg",
+  authDomain: "mahjong-a2377.firebaseapp.com",
+  projectId: "mahjong-a2377",
+  storageBucket: "mahjong-a2377.firebasestorage.app",
+  messagingSenderId: "892513192079",
+  appId: "1:892513192079:web:ce033c110932cfbfc508fa",
+  measurementId: "G-707G2B2DH3"
+};
+
+const db = getFirestore(initializeApp(firebaseConfig));
+
+const players = [
+  "大凸", "阿翔", "大姐", "鱷魚",
+  "抖內姐", "黑人", "藍莓", "阿雯"
+];
+
+const $ = id => document.getElementById(id);
+
+const esc = value => String(value ?? "").replace(
+  /[&<>"']/g,
+  c => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;"
+  }[c])
+);
+
+const num = value =>
+  Number.isFinite(Number(value)) ? Number(value) : 0;
+
+const fmt = value => num(value).toLocaleString(
+  "zh-TW",
+  { maximumFractionDigits: 2 }
+);
+
+const signed = value => (value > 0 ? "+" : "") + fmt(value);
+
+const color = value =>
+  value > 0 ? "positive" : value < 0 ? "negative" : "";
+
+const rank = details =>
+  Object.keys(details || {}).sort(
+    (a, b) => num(details[b]) - num(details[a])
+  );
+
+let records = [];
+let recordsReady = false;
+let recordsError = false;
+
+function urlPlayer() {
+  const player = new URL(location.href).searchParams.get("player");
+  return players.includes(player) ? player : players[0];
+}
+
+let selected = urlPlayer();
+
+$("playerSelect").innerHTML = players.map(player => `
+  <option value="${esc(player)}">${esc(player)}</option>
+`).join("");
+
+$("playerSelect").value = selected;
+
+$("playerSelect").addEventListener("change", () => {
+  selected = $("playerSelect").value;
+
+  const url = new URL(location.href);
+  url.searchParams.set("player", selected);
+
+  history.pushState(null, "", url);
+  render();
+});
+
+window.addEventListener("popstate", () => {
+  selected = urlPlayer();
+  $("playerSelect").value = selected;
+  render();
+});
+
+function result(type, amount) {
+  if (type === "wash") return "洗碗";
+
+  if (type === "money" || num(amount) !== 0) {
+    return `$${fmt(amount)}`;
+  }
+
+  return "尚未確認";
+}
+
+function row(label, value) {
+  return `
+    <div class="row">
+      <span>${label}</span>
+      <strong>${value}</strong>
+    </div>
+  `;
+}
+
+function stat(label, value, className = "") {
+  return `
+    <div class="stat">
+      <span>${label}</span>
+      <strong class="${className}">${value}</strong>
+    </div>
+  `;
+}
+
+function table(headers, rows, emptyMessage) {
+  if (!rows.length) {
+    return `<p class="empty">${emptyMessage}</p>`;
+  }
+
+  return `
+    <table>
+      <thead>
+        <tr>
+          ${headers.map(header => `<th>${header}</th>`).join("")}
+        </tr>
+      </thead>
+      <tbody>${rows.join("")}</tbody>
+    </table>
+  `;
+}
+
+function analyze(allRecords, name) {
+  const totals = Object.fromEntries(
+    players.map(player => [player, 0])
+  );
+
+  const games = [];
+  const guests = [];
+
+  let ownMoney = 0;
+  let guestMoney = 0;
+  let ownWash = 0;
+  let guestWash = 0;
+
+  for (const record of allRecords) {
+    const details = record.details || {};
+    const order = rank(details);
+
+    for (const player of players) {
+      if (Object.hasOwn(details, player)) {
+        totals[player] += num(details[player]);
+      }
+    }
+
+    if (Object.hasOwn(details, name)) {
+      const place = order.indexOf(name) + 1;
+      const score = num(details[name]);
+
+      games.push({ r: record, score, place });
+
+      if (place === 3 || place === 4) {
+        if (record[`donation${place}Type`] === "wash") {
+          ownWash++;
+        } else {
+          ownMoney += num(record[`donation${place}`]);
+        }
+      }
+    }
+
+    for (const k of [3, 4]) {
+      if (record[`parasite${k}Name`] === name) {
+        const type = record[`parasite${k}Type`];
+        const amount = num(record[`parasite${k}Donation`]);
+
+        if (type === "wash") {
+          guestWash++;
+        } else {
+          guestMoney += amount;
+        }
+
+        guests.push({
+          r: record,
+          k,
+          host: order[k - 1] || "—",
+          type,
+          amount
+        });
+      }
+    }
+  }
+
+  const total = totals[name];
+  const count = games.length;
+
+  const wins = games.filter(game => game.score > 0).length;
+  const losses = games.filter(game => game.score < 0).length;
+
+  const places = [1, 2, 3, 4].map(
+    k => games.filter(game => game.place === k).length
+  );
+
+  const position = 1 + players.filter(
+    player => totals[player] > total
+  ).length;
+
+  const best = count
+    ? games.reduce((a, b) => b.score > a.score ? b : a)
+    : null;
+
+  const worst = count
+    ? games.reduce((a, b) => b.score < a.score ? b : a)
+    : null;
+
+  return {
+    games,
+    guests,
+    total,
+    count,
+    wins,
+    losses,
+    places,
+    position,
+    best,
+    worst,
+    ownMoney,
+    guestMoney,
+    ownWash,
+    guestWash
+  };
+}
+
+function drawChart(games) {
+  if (!games.length) {
+    $("chart").innerHTML =
+      '<p class="empty">尚無牌局，開始記錄後就會顯示折線圖。</p>';
+    return;
+  }
+
+  const values = [0];
+
+  games.forEach(game => {
+    values.push(values.at(-1) + game.score);
+  });
+
+  const width = 720;
+  const height = 270;
+  const left = 80;
+  const right = 20;
+  const top = 25;
+  const bottom = 40;
+
+  let min = Math.min(...values);
+  let max = Math.max(...values);
+
+  if (min === max) {
+    min -= 1;
+    max += 1;
+  }
+
+  const padding = (max - min) * 0.1;
+  min -= padding;
+  max += padding;
+
+  const x = index =>
+    left + index / (values.length - 1) * (width - left - right);
+
+  const y = value =>
+    top + (max - value) / (max - min) * (height - top - bottom);
+
+  let grid = "";
+
+  for (let i = 0; i <= 4; i++) {
+    const value = min + (max - min) * i / 4;
+    const yy = y(value);
+
+    grid += `
+      <line
+        x1="${left}" y1="${yy}"
+        x2="${width - right}" y2="${yy}"
+        stroke="#e8edf1"
+      />
+      <text
+        x="${left - 8}" y="${yy + 4}"
+        text-anchor="end"
+        fill="#718096"
+        font-size="12"
+      >${fmt(value)}</text>
+    `;
+  }
+
+  const points = values.map(
+    (value, index) => `${x(index)},${y(value)}`
+  ).join(" ");
+
+  const dots = values.map((value, index) => {
+    if (
+      values.length > 80 &&
+      index !== 0 &&
+      index !== values.length - 1
+    ) {
+      return "";
+    }
+
+    const title = index === 0
+      ? "起點：0 分"
+      : `${games[index - 1].r.date}｜本將 ${signed(games[index - 1].score)}｜累積 ${signed(value)}`;
+
+    return `
+      <circle
+        cx="${x(index)}"
+        cy="${y(value)}"
+        r="3"
+        fill="#2980b9"
+      >
+        <title>${esc(title)}</title>
+      </circle>
+    `;
+  }).join("");
+
+  $("chart").innerHTML = `
+    <svg
+      viewBox="0 0 ${width} ${height}"
+      role="img"
+      aria-label="${esc(selected)}累積積分，最新${fmt(values.at(-1))}分"
+    >
+      <title>累積積分折線圖</title>
+
+      ${grid}
+
+      <line
+        x1="${left}" y1="${y(0)}"
+        x2="${width - right}" y2="${y(0)}"
+        stroke="#9baab7"
+        stroke-dasharray="4 4"
+      />
+
+      <polyline
+        points="${points}"
+        fill="none"
+        stroke="#2980b9"
+        stroke-width="2.5"
+      />
+
+      ${dots}
+
+      <text
+        x="${left}"
+        y="${height - 10}"
+        fill="#718096"
+        font-size="12"
+      >起點</text>
+
+      <text
+        x="${width - right}"
+        y="${height - 10}"
+        text-anchor="end"
+        fill="#718096"
+        font-size="12"
+      >第 ${games.length} 將</text>
+    </svg>
+
+    <p class="note">
+      最新累積：
+      <strong class="${color(values.at(-1))}">
+        ${signed(values.at(-1))} 分
+      </strong>
+    </p>
+  `;
+}
+
+function render() {
+  document.title = `${selected}｜麻將個人數據`;
+  $("profileTitle").textContent = `👤 ${selected} 的數據`;
+  $("content").hidden = !recordsReady;
+
+  if (recordsError) {
+    $("notice").className = "error";
+    $("notice").textContent =
+      "牌局讀取失敗，請檢查網路或資料庫權限後重新整理。";
+    return;
+  }
+
+  if (!recordsReady) {
+    $("notice").textContent = "正在讀取雲端牌局…";
+    return;
+  }
+
+  $("notice").className = "muted";
+  $("notice").textContent = "雲端資料已載入，更新會自動同步。";
+
+  const data = analyze(records, selected);
+
+  $("summary").innerHTML =
+    stat("總積分", signed(data.total), color(data.total)) +
+    stat("總積分排名", data.count ? `${data.position} / 8` : "—") +
+    stat("參與將數", `${data.count} 將`) +
+    stat(
+      "平均積分",
+      data.count ? signed(data.total / data.count) : "—",
+      color(data.count ? data.total / data.count : 0)
+    );
+
+  $("performance").innerHTML =
+    row(
+      "正分率",
+      data.count
+        ? `${(data.wins / data.count * 100).toFixed(1)}%`
+        : "—"
+    ) +
+    row(
+      "正分／負分／0 分",
+      `${data.wins}／${data.losses}／${data.count - data.wins - data.losses} 將`
+    ) +
+    row(
+      "單將最高分",
+      data.best
+        ? `${signed(data.best.score)} 分 <span class="muted">（${esc(data.best.r.date)}）</span>`
+        : "—"
+    ) +
+    row(
+      "單將最低分",
+      data.worst
+        ? `${signed(data.worst.score)} 分 <span class="muted">（${esc(data.worst.r.date)}）</span>`
+        : "—"
+    );
+
+  $("positions").innerHTML = data.places.map(
+    (count, index) => stat(`第 ${index + 1} 名`, `${count} 次`)
+  ).join("");
+
+  $("payments").innerHTML =
+    row("本人捐款", `$${fmt(data.ownMoney)}`) +
+    row("寄生捐款", `$${fmt(data.guestMoney)}`) +
+    row("捐款合計", `$${fmt(data.ownMoney + data.guestMoney)}`) +
+    row(
+      "平均一將捐",
+      data.count
+        ? `${fmt((data.ownMoney + data.guestMoney) / data.count)} 元`
+        : "—"
+    ) +
+    row("本人洗碗", `${data.ownWash} 次`) +
+    row("寄生洗碗", `${data.guestWash} 次`) +
+    row("洗碗合計", `${data.ownWash + data.guestWash} 次`);
+
+  drawChart(data.games);
+
+  $("history").innerHTML = table(
+    ["日期／時間", "積分", "名次", "同桌玩家", "本人結果"],
+    [...data.games].reverse().map(game => `
+      <tr>
+        <td>
+          ${esc(game.r.date)}<br>
+          <span class="muted">${esc(game.r.time)}</span>
+        </td>
+
+        <td class="${color(game.score)}">
+          ${signed(game.score)}
+        </td>
+
+        <td>第 ${game.place} 名</td>
+
+        <td class="players">
+          ${Object.keys(game.r.details)
+            .filter(player => player !== selected)
+            .map(esc)
+            .join("、")}
+        </td>
+
+        <td>
+          ${game.place >= 3
+            ? result(
+                game.r[`donation${game.place}Type`],
+                game.r[`donation${game.place}`]
+              )
+            : "—"}
+        </td>
+      </tr>
+    `),
+    "尚無參與牌局。"
+  );
+
+  $("parasites").innerHTML = table(
+    ["日期／時間", "寄生對象", "結果"],
+    [...data.guests].reverse().map(guest => `
+      <tr>
+        <td>
+          ${esc(guest.r.date)}<br>
+          <span class="muted">${esc(guest.r.time)}</span>
+        </td>
+
+        <td>
+          ${esc(guest.host)}（第 ${guest.k} 名）
+        </td>
+
+        <td>${result(guest.type, guest.amount)}</td>
+      </tr>
+    `),
+    "尚無寄生紀錄。"
+  );
+}
+
+onSnapshot(
+  query(
+    collection(db, "mahjong_records_v7"),
+    orderBy("timestamp", "asc")
+  ),
+  snapshot => {
+    records = snapshot.docs.map(document => ({
+      ...document.data(),
+      id: document.id
+    }));
+
+    recordsReady = true;
+    recordsError = false;
+    render();
+  },
+  error => {
+    console.error(error);
+    recordsError = true;
+    render();
+  }
+);
+
+render();
+</script>
+</body>
+</html>
