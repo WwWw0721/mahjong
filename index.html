@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>麻將雲端記帳本</title>
-
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;max-width:650px;margin:30px auto;padding:20px;background:#f4f7f6;color:#333}
@@ -65,11 +64,7 @@ dialog::backdrop{background:#0007}
 
 <div class="card">
   <h3>💰 公基金收支</h3>
-  <button
-    type="button"
-    class="action-btn"
-    onclick="location.href='./fund.html'"
-  >
+  <button type="button" class="action-btn" onclick="location.href='./fund.html'">
     查看捐款收入與支出
   </button>
 </div>
@@ -101,13 +96,11 @@ dialog::backdrop{background:#0007}
 
 <div class="card" id="entryCard">
   <h3>1. 選擇打牌日期與 4 位玩家</h3>
-
   <label for="gameDate">選擇日期：</label>
   <input type="date" id="gameDate">
 
   <label style="margin-top:15px">8 選 4：選擇本局 4 位玩家</label>
   <p class="note">直接點擊未選中的人，即可自動替換！</p>
-
   <div class="player-select-grid" id="playerSelectorContainer"></div>
 
   <h3>2. 輸入各家積分</h3>
@@ -150,12 +143,10 @@ dialog::backdrop{background:#0007}
 
 <div class="card">
   <h3>💸 平均一將捐款排行榜</h3>
-
   <p class="note">
     （本人捐款＋寄生捐款）÷ 個人參與將數，越低越前面。
     未參與牌局者不列名次，放在最後。
   </p>
-
   <div id="avgDonationRankContainer"></div>
 </div>
 
@@ -165,11 +156,11 @@ dialog::backdrop{background:#0007}
 </div>
 
 <div class="card">
-  <h3>💰 總金額（捐款）</h3>
+  <h3>💰 目前餘額（捐款－支出）</h3>
 
   <div class="grand-total-box">
-    <span>目前總金額</span>
-    <span class="grand-total-amount" id="grandTotalAmount">$0</span>
+    <span>目前金額</span>
+    <span class="grand-total-amount" id="grandTotalAmount">—</span>
   </div>
 
   <p class="note" id="grandTotalDetail" style="text-align:center"></p>
@@ -190,12 +181,7 @@ dialog::backdrop{background:#0007}
 
   <div class="edit-actions">
     <button onclick="closeEditor()">取消</button>
-
-    <button
-      class="small-confirm-btn"
-      onclick="saveEdit()"
-      id="editSaveButton"
-    >
+    <button class="small-confirm-btn" onclick="saveEdit()" id="editSaveButton">
       儲存修改
     </button>
   </div>
@@ -247,7 +233,13 @@ let playerStates = Object.fromEntries(
 
 let records = [];
 let donationTotal = 0;
+let expenseTotal = 0;
 let editState = null;
+
+let incomeReady = false;
+let expenseReady = false;
+let incomeFailed = false;
+let expenseFailed = false;
 
 const pending = new Set();
 const $ = id => document.getElementById(id);
@@ -491,9 +483,41 @@ window.addRecord = () => busy(
   $("entryCard")
 );
 
+// 目前金額＝捐款收入－支出。
 function updateTotal() {
-  $("grandTotalAmount").textContent = `$${donationTotal}`;
-  $("grandTotalDetail").textContent = "包含一般捐款與寄生捐款";
+  const amount = $("grandTotalAmount");
+  const detail = $("grandTotalDetail");
+
+  if (incomeFailed || expenseFailed) {
+    amount.textContent = "—";
+    amount.style.color = "#718096";
+
+    detail.textContent = expenseFailed
+      ? "無法讀取支出，請檢查網路與資料庫權限後重新整理。"
+      : "無法讀取捐款收入，請檢查網路與資料庫權限後重新整理。";
+
+    return;
+  }
+
+  if (!incomeReady || !expenseReady) {
+    amount.textContent = "—";
+    amount.style.color = "#718096";
+    detail.textContent = "正在讀取捐款與支出…";
+    return;
+  }
+
+  const balance = donationTotal - expenseTotal;
+
+  const fmt = number => Number(number).toLocaleString(
+    "zh-TW",
+    { maximumFractionDigits: 2 }
+  );
+
+  amount.textContent = `$${fmt(balance)}`;
+  amount.style.color = balance < 0 ? "#e74c3c" : "#27ae60";
+
+  detail.textContent =
+    `捐款收入 $${fmt(donationTotal)} － 累積支出 $${fmt(expenseTotal)}`;
 }
 
 function ranking(container, values, mode, counts) {
@@ -660,7 +684,6 @@ function resultInputs(record) {
   `;
 }
 
-// 將每位玩家的每將積分分別視為一筆紀錄。
 function gameScoreExtremes(allRecords) {
   const entries = [];
   const dateCounts = {};
@@ -668,7 +691,6 @@ function gameScoreExtremes(allRecords) {
   for (const record of allRecords) {
     const date = record.date || "未分類日期";
     const gameNumber = (dateCounts[date] || 0) + 1;
-
     dateCounts[date] = gameNumber;
 
     for (const [name, raw] of Object.entries(record.details || {})) {
@@ -861,8 +883,7 @@ function renderDashboard() {
 window.toggleParasiteDonation = (id, k) => {
   const active = $("par" + k + "_" + id).value !== "";
 
-  $("wrap" + k + "_" + id).style.display =
-    active ? "flex" : "none";
+  $("wrap" + k + "_" + id).style.display = active ? "flex" : "none";
 
   if (!active) {
     $("pamt" + k + "_" + id).value = "";
@@ -893,23 +914,15 @@ window.saveDonation = id => busy(
         throw Error("請選擇寄生人的捐款結果！");
       }
 
-      data[`donation${k}`] =
-        value === "wash" ? 0 : Number(value);
-
-      data[`donation${k}Type`] =
-        value === "wash" ? "wash" : "money";
-
+      data[`donation${k}`] = value === "wash" ? 0 : Number(value);
+      data[`donation${k}Type`] = value === "wash" ? "wash" : "money";
       data[`parasite${k}Name`] = guest;
 
       data[`parasite${k}Donation`] =
-        guest && parasiteValue !== "wash"
-          ? Number(parasiteValue)
-          : 0;
+        guest && parasiteValue !== "wash" ? Number(parasiteValue) : 0;
 
       data[`parasite${k}Type`] =
-        guest
-          ? (parasiteValue === "wash" ? "wash" : "money")
-          : "";
+        guest ? (parasiteValue === "wash" ? "wash" : "money") : "";
     }
 
     await runTransaction(db, async transaction => {
@@ -1115,13 +1128,47 @@ onSnapshot(
       id: document.id
     }));
 
+    incomeReady = true;
+    incomeFailed = false;
     renderDashboard();
   },
   error => {
     console.error(error);
 
+    incomeFailed = true;
+    updateTotal();
+
     $("recordList").textContent =
       "牌局載入失敗，請檢查網路與資料庫權限。";
+  }
+);
+
+// 讀取與 fund.html 相同的支出資料。
+onSnapshot(
+  query(
+    collection(db, "mahjong_expenses_v1"),
+    orderBy("timestamp", "asc")
+  ),
+  snapshot => {
+    expenseTotal = snapshot.docs.reduce((sum, document) => {
+      const amount = Number(document.data().amount);
+
+      return sum + (
+        Number.isFinite(amount)
+          ? Math.round(amount * 100)
+          : 0
+      );
+    }, 0) / 100;
+
+    expenseReady = true;
+    expenseFailed = false;
+    updateTotal();
+  },
+  error => {
+    console.error(error);
+
+    expenseFailed = true;
+    updateTotal();
   }
 );
 </script>
