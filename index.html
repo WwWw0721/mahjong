@@ -65,7 +65,6 @@ dialog::backdrop{background:#0007}
 
 <div class="card">
   <h3>💰 公基金收支</h3>
-
   <button
     type="button"
     class="action-btn"
@@ -102,6 +101,7 @@ dialog::backdrop{background:#0007}
 
 <div class="card" id="entryCard">
   <h3>1. 選擇打牌日期與 4 位玩家</h3>
+
   <label for="gameDate">選擇日期：</label>
   <input type="date" id="gameDate">
 
@@ -126,6 +126,16 @@ dialog::backdrop{background:#0007}
 <div class="card">
   <h3>📈 平均分排行榜（總積分 ÷ 場次）</h3>
   <div id="avgRankContainer"></div>
+</div>
+
+<div class="card">
+  <h3>🔥 單將最高積分前三筆</h3>
+  <div id="topGameScoreContainer"></div>
+</div>
+
+<div class="card">
+  <h3>🥶 單將最低積分前三筆</h3>
+  <div id="bottomGameScoreContainer"></div>
 </div>
 
 <div class="card">
@@ -181,7 +191,11 @@ dialog::backdrop{background:#0007}
   <div class="edit-actions">
     <button onclick="closeEditor()">取消</button>
 
-    <button class="small-confirm-btn" onclick="saveEdit()" id="editSaveButton">
+    <button
+      class="small-confirm-btn"
+      onclick="saveEdit()"
+      id="editSaveButton"
+    >
       儲存修改
     </button>
   </div>
@@ -513,7 +527,6 @@ function ranking(container, values, mode, counts) {
   ).join("") + "</ul>";
 }
 
-// 平均捐款越低越前面；沒參與牌局的人放最後。
 function donationRanking(donations, counts) {
   const played = allPlayers
     .filter(player => counts[player] > 0)
@@ -647,7 +660,73 @@ function resultInputs(record) {
   `;
 }
 
+// 將每位玩家的每將積分分別視為一筆紀錄。
+function gameScoreExtremes(allRecords) {
+  const entries = [];
+  const dateCounts = {};
+
+  for (const record of allRecords) {
+    const date = record.date || "未分類日期";
+    const gameNumber = (dateCounts[date] || 0) + 1;
+
+    dateCounts[date] = gameNumber;
+
+    for (const [name, raw] of Object.entries(record.details || {})) {
+      const score = Number(raw);
+
+      if (!Number.isFinite(score)) continue;
+
+      entries.push({
+        name,
+        score,
+        date,
+        time: record.time || "",
+        gameNumber
+      });
+    }
+  }
+
+  return {
+    highest: [...entries]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3),
+
+    lowest: [...entries]
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 3)
+  };
+}
+
+function renderGameScoreExtremes(allRecords) {
+  const extremes = gameScoreExtremes(allRecords);
+
+  for (const [id, list] of [
+    ["topGameScoreContainer", extremes.highest],
+    ["bottomGameScoreContainer", extremes.lowest]
+  ]) {
+    $(id).innerHTML = list.length
+      ? '<ul class="rank-list">' + list.map((entry, index) => `
+          <li class="rank-item ${index === 0 ? "top-1" : ""}">
+            <span>
+              第 ${index + 1} 筆：${esc(entry.name)}
+              <br>
+              <small class="note">
+                ${esc(entry.date)} ${esc(entry.time)}・第 ${entry.gameNumber} 將
+              </small>
+            </span>
+
+            <span class="${color(entry.score)}">
+              ${signed(entry.score)} 分
+            </span>
+          </li>
+        `).join("") + "</ul>"
+      : '<p class="empty">尚無打牌紀錄</p>';
+  }
+}
+
 function renderDashboard() {
+  renderGameScoreExtremes(records);
+
   const scores = zeros();
   const counts = zeros();
   const donations = zeros();
